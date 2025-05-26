@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servo Controller Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Servo Controller System Dashboard</h1>
+
+        <div class="controls">
+            <button id="refreshButton">Aggiorna Tutti i Grafici</button>
+            <span id="statusMessage" class="status"></span>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-item">
+                <h2>Potenziometri (Raw Value)</h2>
+                <canvas id="potRawChart"></canvas>
+            </div>
+            <div class="chart-item">
+                <h2>Angoli Servo</h2>
+                <canvas id="servoAngleChart"></canvas>
+            </div>
+            <div class="chart-item">
+                <h2>Stato Pulsante e LED</h2>
+                <canvas id="buttonLedChart"></canvas>
+            </div>
+            <div class="chart-item">
+                <h2>Statistiche di Sistema</h2>
+                <canvas id="systemStatsChart"></canvas>
+            </div>
+            </div>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
