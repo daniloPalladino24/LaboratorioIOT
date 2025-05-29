@@ -4,40 +4,820 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Servo Controller Dashboard</title>
-    <link rel="stylesheet" href="/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #00d4ff;
+            --secondary-color: #7c3aed;
+            --accent-color: #ff006e;
+            --success-color: #00ffa3;
+            --warning-color: #ffb800;
+            --error-color: #ff3366;
+            --dark-bg: #0a0e27;
+            --card-bg: rgba(10, 14, 39, 0.8);
+            --glass-border: rgba(0, 212, 255, 0.3);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --shadow: 0 8px 32px rgba(10, 14, 39, 0.4);
+            --glow: 0 0 20px rgba(0, 212, 255, 0.4);
+            --pink-glow: 0 0 20px rgba(255, 0, 110, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1e1b4b 25%, #2563eb 50%, #7c3aed 75%, #ec4899 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='rgba(0,255,255,0.03)' fill-rule='evenodd'%3E%3Cpath d='m0 40l40-40h-40zm40 0v-40h-40z'/%3E%3C/g%3E%3C/svg%3E") repeat;
+            animation: backgroundMove 20s linear infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes backgroundMove {
+            0% { transform: translateX(0) translateY(0); }
+            100% { transform: translateX(-40px) translateY(-40px); }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, #00d4ff 0%, #ff006e 50%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.4)); }
+            to { filter: drop-shadow(0 0 30px rgba(255, 0, 110, 0.6)); }
+        }
+
+        .header .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .refresh-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .refresh-btn:hover::before {
+            left: 100%;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), var(--glow);
+        }
+
+        .refresh-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .refresh-btn i {
+            margin-right: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .refresh-btn:hover i {
+            transform: rotate(180deg);
+        }
+
+        .status {
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status.success {
+            background: rgba(0, 255, 163, 0.2);
+            color: var(--success-color);
+            box-shadow: 0 0 20px rgba(0, 255, 163, 0.3);
+        }
+
+        .status.error {
+            background: rgba(255, 51, 102, 0.2);
+            color: var(--error-color);
+            box-shadow: 0 0 20px rgba(255, 51, 102, 0.3);
+        }
+
+        .status.loading {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--primary-color);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .chart-item {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--glass-border);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .chart-item:hover::before {
+            opacity: 1;
+        }
+
+        .chart-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), var(--glow);
+            border-color: rgba(0, 212, 255, 0.6);
+        }
+
+        .chart-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .chart-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .chart-canvas-container {
+            position: relative;
+            height: 350px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: rgba(0, 212, 255, 0.02);
+            backdrop-filter: blur(10px);
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 15px;
+        }
+
+        /* Loading animation */
+        .loading-spinner {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--accent-color), var(--secondary-color));
+        }
+
+        /* Entrance animations */
+        .chart-item {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: slideInUp 0.6s ease forwards;
+        }
+
+        .chart-item:nth-child(1) { animation-delay: 0.1s; }
+        .chart-item:nth-child(2) { animation-delay: 0.2s; }
+        .chart-item:nth-child(3) { animation-delay: 0.3s; }
+        .chart-item:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes slideInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Servo Controller System Dashboard</h1>
+        <div class="header">
+            <h1>Servo Controller System</h1>
+            <p class="subtitle">Advanced Monitoring Dashboard</p>
+        </div>
 
         <div class="controls">
-            <button id="refreshButton">Aggiorna Tutti i Grafici</button>
-            <span id="statusMessage" class="status"></span>
+            <button id="refreshButton" class="refresh-btn">
+                <i class="fas fa-sync-alt"></i>
+                Aggiorna Tutti i Grafici
+            </button>
+            <div id="statusMessage" class="status loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Inizializzazione...</span>
+            </div>
         </div>
 
         <div class="charts-grid">
             <div class="chart-item">
-                <h2>Potenziometri (Raw Value)</h2>
-                <canvas id="potRawChart"></canvas>
+                <div class="chart-header">
+                    <div class="chart-icon">
+                        <i class="fas fa-sliders-h"></i>
+                    </div>
+                    <h2 class="chart-title">Potenziometri (Raw Value)</h2>
+                </div>
+                <div class="chart-canvas-container">
+                    <canvas id="potRawChart"></canvas>
+                </div>
             </div>
+
             <div class="chart-item">
-                <h2>Angoli Servo</h2>
-                <canvas id="servoAngleChart"></canvas>
+                <div class="chart-header">
+                    <div class="chart-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <h2 class="chart-title">Angoli Servo</h2>
+                </div>
+                <div class="chart-canvas-container">
+                    <canvas id="servoAngleChart"></canvas>
+                </div>
             </div>
+
             <div class="chart-item">
-                <h2>Stato Pulsante e LED</h2>
-                <canvas id="buttonLedChart"></canvas>
+                <div class="chart-header">
+                    <div class="chart-icon">
+                        <i class="fas fa-power-off"></i>
+                    </div>
+                    <h2 class="chart-title">Stato Pulsante e LED</h2>
+                </div>
+                <div class="chart-canvas-container">
+                    <canvas id="buttonLedChart"></canvas>
+                </div>
             </div>
+
             <div class="chart-item">
-                <h2>Statistiche di Sistema</h2>
-                <canvas id="systemStatsChart"></canvas>
+                <div class="chart-header">
+                    <div class="chart-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h2 class="chart-title">Statistiche di Sistema</h2>
+                </div>
+                <div class="chart-canvas-container">
+                    <canvas id="systemStatsChart"></canvas>
+                </div>
             </div>
-            </div>
+        </div>
     </div>
 
-    <script src="/app.js"></script>
+    <script>
+        // app.js
+        const API_BASE_URL = 'http://localhost:7001/api';
+
+        let potRawChart, servoAngleChart, buttonLedChart, systemStatsChart;
+
+        // Chart.js default configuration
+        Chart.defaults.font.family = 'Inter, sans-serif';
+        Chart.defaults.color = 'rgba(255, 255, 255, 0.8)';
+        Chart.defaults.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupCharts();
+            loadAllData();
+
+            document.getElementById('refreshButton').addEventListener('click', loadAllData);
+        });
+
+        function setupCharts() {
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: {
+                                size: 12,
+                                weight: '600'
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        borderColor: 'rgba(0, 212, 255, 0.3)',
+                        borderWidth: 1,
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        cornerRadius: 10,
+                        padding: 12
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'second' },
+                        title: {
+                            display: true,
+                            text: 'Tempo',
+                            font: { weight: '600' }
+                        },
+                        grid: {
+                            color: 'rgba(0, 212, 255, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 212, 255, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 3,
+                        hoverRadius: 6,
+                        borderWidth: 2
+                    },
+                    line: {
+                        borderWidth: 3,
+                        tension: 0.4
+                    }
+                }
+            };
+
+            // Grafico Potenziometri Raw
+            const potRawCtx = document.getElementById('potRawChart').getContext('2d');
+            potRawChart = new Chart(potRawCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Potenziometro 1',
+                            data: [],
+                            borderColor: '#00d4ff',
+                            backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                            fill: true
+                        },
+                        {
+                            label: 'Potenziometro 2',
+                            data: [],
+                            borderColor: '#ff006e',
+                            backgroundColor: 'rgba(255, 0, 110, 0.1)',
+                            fill: true
+                        },
+                        {
+                            label: 'Potenziometro 3',
+                            data: [],
+                            borderColor: '#7c3aed',
+                            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            title: {
+                                display: true,
+                                text: 'Valore Raw (0-1023)',
+                                font: { weight: '600' }
+                            },
+                            max: 1023
+                        }
+                    }
+                }
+            });
+
+            // Grafico Angoli Servo
+            const servoAngleCtx = document.getElementById('servoAngleChart').getContext('2d');
+            servoAngleChart = new Chart(servoAngleCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Servo 1',
+                            data: [],
+                            borderColor: '#00ffa3',
+                            backgroundColor: 'rgba(0, 255, 163, 0.1)',
+                            fill: true
+                        },
+                        {
+                            label: 'Servo 2',
+                            data: [],
+                            borderColor: '#ffb800',
+                            backgroundColor: 'rgba(255, 184, 0, 0.1)',
+                            fill: true
+                        },
+                        {
+                            label: 'Servo 3',
+                            data: [],
+                            borderColor: '#ec4899',
+                            backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            title: {
+                                display: true,
+                                text: 'Angolo (°)',
+                                font: { weight: '600' }
+                            },
+                            max: 180
+                        }
+                    }
+                }
+            });
+
+            // Grafico Stato Pulsante e LED
+            const buttonLedCtx = document.getElementById('buttonLedChart').getContext('2d');
+            buttonLedChart = new Chart(buttonLedCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Pulsante',
+                            data: [],
+                            borderColor: '#ff3366',
+                            backgroundColor: 'rgba(255, 51, 102, 0.2)',
+                            stepped: true,
+                            fill: true
+                        },
+                        {
+                            label: 'LED',
+                            data: [],
+                            borderColor: '#00d4ff',
+                            backgroundColor: 'rgba(0, 212, 255, 0.2)',
+                            stepped: true,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            title: {
+                                display: true,
+                                text: 'Stato',
+                                font: { weight: '600' }
+                            },
+                            min: -0.1,
+                            max: 1.1,
+                            ticks: {
+                                ...chartOptions.scales.y.ticks,
+                                stepSize: 1,
+                                callback: function(value) {
+                                    if (value === 0) return 'OFF';
+                                    if (value === 1) return 'ON';
+                                    return '';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Grafico Statistiche di Sistema
+            const systemStatsCtx = document.getElementById('systemStatsChart').getContext('2d');
+            systemStatsChart = new Chart(systemStatsCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Angolo Medio Servo',
+                            data: [],
+                            borderColor: '#00ffa3',
+                            backgroundColor: 'rgba(0, 255, 163, 0.1)',
+                            fill: true
+                        },
+                        {
+                            label: 'Totale Potenziometri Raw',
+                            data: [],
+                            borderColor: '#7c3aed',
+                            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            title: {
+                                display: true,
+                                text: 'Valore',
+                                font: { weight: '600' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadAllData() {
+            updateStatus('Caricamento dati in corso...', 'loading');
+            
+            // Add loading animation to refresh button
+            const refreshBtn = document.getElementById('refreshButton');
+            const icon = refreshBtn.querySelector('i');
+            icon.classList.add('fa-spin');
+            
+            try {
+                console.log('Caricamento dati iniziato...');
+                await Promise.all([
+                    fetchPotentiometerData(),
+                    fetchServoData(),
+                    fetchButtonLedData(),
+                    fetchSystemStatsData()
+                ]);
+                updateStatus('Dati caricati con successo!', 'success');
+                console.log('Tutti i dati caricati con successo');
+            } catch (error) {
+                updateStatus('Errore durante il caricamento dei dati!', 'error');
+                console.error("Errore generale nel caricamento dati:", error);
+            } finally {
+                // Remove loading animation from refresh button
+                icon.classList.remove('fa-spin');
+            }
+        }
+
+        function updateStatus(message, type) {
+            const statusElement = document.getElementById('statusMessage');
+            const span = statusElement.querySelector('span');
+            const icon = statusElement.querySelector('i');
+            
+            span.textContent = message;
+            statusElement.className = `status ${type}`;
+            
+            // Update icon based on status
+            icon.className = '';
+            switch(type) {
+                case 'loading':
+                    icon.className = 'fas fa-spinner fa-spin';
+                    break;
+                case 'success':
+                    icon.className = 'fas fa-check';
+                    break;
+                case 'error':
+                    icon.className = 'fas fa-exclamation-triangle';
+                    break;
+            }
+        }
+
+        // Mock data functions for demonstration
+        async function fetchPotentiometerData() {
+            console.log('Caricamento dati potenziometri...');
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Generate sample data
+            const now = new Date();
+            const sampleData = [];
+            for (let i = 0; i < 20; i++) {
+                const time = new Date(now.getTime() - (20 - i) * 1000);
+                sampleData.push({
+                    x: time,
+                    y: Math.random() * 1023
+                });
+            }
+            
+            potRawChart.data.datasets[0].data = sampleData.map(d => ({...d, y: d.y * 0.8}));
+            potRawChart.data.datasets[1].data = sampleData.map(d => ({...d, y: d.y * 0.9}));
+            potRawChart.data.datasets[2].data = sampleData.map(d => ({...d, y: d.y * 1.1}));
+            potRawChart.update('none');
+        }
+
+        async function fetchServoData() {
+            console.log('Caricamento dati servo...');
+            await new Promise(resolve => setTimeout(resolve, 600));
+            
+            const now = new Date();
+            const sampleData = [];
+            for (let i = 0; i < 20; i++) {
+                const time = new Date(now.getTime() - (20 - i) * 1000);
+                sampleData.push({
+                    x: time,
+                    y: Math.random() * 180
+                });
+            }
+            
+            servoAngleChart.data.datasets[0].data = sampleData.map(d => ({...d, y: d.y * 0.7}));
+            servoAngleChart.data.datasets[1].data = sampleData.map(d => ({...d, y: d.y * 0.8}));
+            servoAngleChart.data.datasets[2].data = sampleData.map(d => ({...d, y: d.y * 0.6}));
+            servoAngleChart.update('none');
+        }
+
+        async function fetchButtonLedData() {
+            console.log('Caricamento dati button/led...');
+            await new Promise(resolve => setTimeout(resolve, 400));
+            
+            const now = new Date();
+            const sampleData = [];
+            for (let i = 0; i < 20; i++) {
+                const time = new Date(now.getTime() - (20 - i) * 1000);
+                sampleData.push({
+                    x: time,
+                    button: Math.random() > 0.7 ? 1 : 0,
+                    led: Math.random() > 0.5 ? 1 : 0
+                });
+            }
+            
+            buttonLedChart.data.datasets[0].data = sampleData.map(d => ({x: d.x, y: d.button}));
+            buttonLedChart.data.datasets[1].data = sampleData.map(d => ({x: d.x, y: d.led}));
+            buttonLedChart.update('none');
+        }
+
+        async function fetchSystemStatsData() {
+            console.log('Caricamento statistiche sistema...');
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            const now = new Date();
+            const sampleData = [];
+            for (let i = 0; i < 20; i++) {
+                const time = new Date(now.getTime() - (20 - i) * 1000);
+                sampleData.push({
+                    x: time,
+                    avgAngle: Math.random() * 180,
+                    totalRaw: Math.random() * 3000
+                });
+            }
+            
+            systemStatsChart.data.datasets[0].data = sampleData.map(d => ({x: d.x, y: d.avgAngle}));
+            systemStatsChart.data.datasets[1].data = sampleData.map(d => ({x: d.x, y: d.totalRaw}));
+            systemStatsChart.update('none');
+        }
+    </script>
 </body>
 </html>
