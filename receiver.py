@@ -181,11 +181,11 @@ while True:
             is_connected = True
             
             # Debug con indicazione dei valori grezzi e angoli risultanti (specchiati)
-            pot1_status = "[LIMIT]" if pot1_val > 512 else ""
-            pot2_status = "[LIMIT]" if pot2_val > 512 else ""
-            pot3_status = "[LIMIT]" if pot3_val > 512 else ""
+            pot1_status = "" if pot1_val > 512 else ""
+            pot2_status = "" if pot2_val > 512 else ""
+            pot3_status = "" if pot3_val > 512 else ""
             
-            print("RX: P1={}{} P2={}{} P3={}{} BTN={} → A1={}° A2={}° A3={}° LED={} [MIRRORED]".format(
+            print("RX: P1={}{} P2={}{} P3={}{} BTN={} → A1={}° A2={}° A3={}° LED={}".format(
                 pot1_val, pot1_status, pot2_val, pot2_status, pot3_val, pot3_status,
                 button_state, round(angle1), round(angle2), round(angle3), 1-button_state))
     
