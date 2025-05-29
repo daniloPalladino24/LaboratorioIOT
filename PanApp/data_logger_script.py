@@ -66,7 +66,30 @@ def parse_servo_data(line):
         angle1 = float(a1)
         angle2 = float(a2)
         angle3 = float(a3)
-        led_state = int(led)
+        led_raw = int(led)
+        
+        # ======================================================
+        # CORREZIONE LOGICA LED - VERSIONE DEFINITIVA
+        # ======================================================
+        # Dal codice micro:bit ricevente:
+        # def control_led(button_state):
+        #     inverted_state = 1 - button_state  # 0→1, 1→0
+        #     pin14.write_digital(inverted_state)
+        #     return inverted_state
+        # 
+        # Quindi nel debug micro:bit viene mostrato: LED=inverted_state
+        # Ma per la dashboard vogliamo che:
+        # - button_pressed=0 (NON premuto) → led_state=1 (ACCESO)
+        # - button_pressed=1 (premuto) → led_state=0 (SPENTO)
+        #
+        # Il valore led_raw dal debug micro:bit È GIÀ CORRETTO!
+        # Non serve inversione aggiuntiva
+        led_state = led_raw
+        
+        # Verifica logica corretta
+        expected_led_state = 1 - button  # Logica attesa: opposto del pulsante
+        if led_raw != expected_led_state:
+            logger.warning(f"⚠️ LED Logic Inconsistency: Button={button}, LED_Raw={led_raw}, Expected={expected_led_state}")
         
         # Calcola percentuali per i potenziometri (0-100%)
         pot1_percent = (pot1_raw / 1023) * 100
@@ -100,7 +123,8 @@ def parse_servo_data(line):
             "pot2_percent": round(pot2_percent, 1),
             "pot3_percent": round(pot3_percent, 1),
             "button_pressed": button,
-            "led_state": led_state,
+            "led_state": led_state,          # Stato corretto per dashboard
+            "led_raw": led_raw,              # Valore raw per debug
             "servo1_angle": angle1,
             "servo2_angle": angle2,
             "servo3_angle": angle3,
@@ -154,12 +178,13 @@ def create_influxdb_points(data, timestamp=None):
     
     points.append(servo_point)
     
-    # Punto separato per controlli (pulsante e LED)
+    # Punto separato per controlli (pulsante e LED) - CON ENTRAMBI I VALORI LED
     control_point = Point("servo_controller") \
         .tag("device", DEVICE_NAME) \
         .tag("type", "controls") \
         .field("button_pressed", data["button_pressed"]) \
         .field("led_state", data["led_state"]) \
+        .field("led_raw", data["led_raw"]) \
         .time(timestamp)
     
     points.append(control_point)
@@ -186,8 +211,20 @@ def print_servo_status(data):
     print(f"🎛️  POT1: {data['pot1_raw']:4d} ({data['pot1_percent']:5.1f}%) → SERVO1: {data['servo1_angle']:6.1f}° ({data['servo1_angle_percent']:5.1f}%) [PWM:{data['servo1_pwm']:3d}]")
     print(f"🎛️  POT2: {data['pot2_raw']:4d} ({data['pot2_percent']:5.1f}%) → SERVO2: {data['servo2_angle']:6.1f}° ({data['servo2_angle_percent']:5.1f}%) [PWM:{data['servo2_pwm']:3d}]")
     print(f"🎛️  POT3: {data['pot3_raw']:4d} ({data['pot3_percent']:5.1f}%) → SERVO3: {data['servo3_angle']:6.1f}° ({data['servo3_angle_percent']:5.1f}%) [PWM:{data['servo3_pwm']:3d}]")
-    print(f"🔘 Button: {'PRESSED' if data['button_pressed'] else 'RELEASED'} → LED: {'ON' if data['led_state'] else 'OFF'}")
+    
+    # Display LED CORRETTO con verifica logica
+    button_status = 'PRESSED' if data['button_pressed'] else 'RELEASED'
+    led_status = 'ON' if data['led_state'] else 'OFF'
+    
+    print(f"🔘 Button: {button_status} → LED: {led_status} [Raw LED: {data['led_raw']}]")
     print(f"⚙️  Active Servos: {data['servos_active_count']}/3")
+    
+    # Verifica logica LED e mostra stato
+    expected_led = 1 - data['button_pressed']
+    if data['led_state'] == expected_led:
+        print(f"💡 LED Logic: ✅ CORRECT - Button {button_status} → LED {led_status}")
+    else:
+        print(f"💡 LED Logic: ❌ INCORRECT - Button {button_status} → LED {led_status} (Expected: {'ON' if expected_led else 'OFF'})")
     
     # Statistiche aggiuntive
     avg_angle = (data['servo1_angle'] + data['servo2_angle'] + data['servo3_angle']) / 3
@@ -213,10 +250,11 @@ def print_system_summary(stats):
 
 def main():
     print("=" * 70)
-    print("🚀 SERVO CONTROLLER SYSTEM → InfluxDB Logger [VERSIONE CORRETTA]")
+    print("🚀 SERVO CONTROLLER SYSTEM → InfluxDB Logger [LED LOGIC FIXED]")
     print("=" * 70)
     print("🎛️  3 Potenziometri + 3 Servo + Pulsante + LED + Real-time Data Logging")
     print("📊 Dati strutturati per dashboard InfluxDB/Grafana")
+    print("💡 LED Logic: Button RELEASED → LED ON | Button PRESSED → LED OFF")
     print("=" * 70)
     
     # Statistiche

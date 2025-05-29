@@ -187,11 +187,12 @@ def get_potentiometer_history(hours=1):
         return []
 
 def get_recent_measurements(limit=50):
-    """Ottiene le ultime misurazioni per la tabella"""
+    """Ottiene le ultime misurazioni campionate ogni 30 secondi per la tabella"""
     if not query_api:
         return []
     
     try:
+        # Query con campionamento ogni 30 secondi - DATI SERVO
         query = f'''
         from(bucket: "{INFLUXDB_BUCKET}")
         |> range(start: -6h)
@@ -201,32 +202,35 @@ def get_recent_measurements(limit=50):
                             r["_field"] == "pot1_percent" or r["_field"] == "pot2_percent" or r["_field"] == "pot3_percent" or
                             r["_field"] == "servos_active_count")
         |> aggregateWindow(every: 30s, fn: last, createEmpty: false)
-        |> yield(name: "last")
+        |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+        |> sort(columns: ["_time"], desc: true)
+        |> limit(n: {limit})
         '''
         
+        # Query separata per i controlli (pulsante e LED) campionati ogni 30 secondi
         controls_query = f'''
         from(bucket: "{INFLUXDB_BUCKET}")
         |> range(start: -6h)
         |> filter(fn: (r) => r["_measurement"] == "servo_controller")
         |> filter(fn: (r) => r["type"] == "controls")
         |> aggregateWindow(every: 30s, fn: last, createEmpty: false)
-        |> yield(name: "last")
+        |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+        |> sort(columns: ["_time"], desc: true)
+        |> limit(n: {limit})
         '''
         
         servo_result = query_api.query(query)
         controls_result = query_api.query(controls_query)
         
-        # Organizza i dati per timestamp
+        # Organizza i dati per timestamp dai servo
         measurements = {}
         
         # Processa dati servo
         for table in servo_result:
             for record in table.records:
                 timestamp = record.get_time()
-                field = record.get_field()
-                value = record.get_value()
-                
                 ts_key = timestamp.isoformat()
+                
                 if ts_key not in measurements:
                     measurements[ts_key] = {
                         'timestamp': timestamp,
@@ -234,34 +238,60 @@ def get_recent_measurements(limit=50):
                         'date_str': timestamp.strftime('%d/%m/%Y')
                     }
                 
-                measurements[ts_key][field] = value
+                # Aggiungi tutti i campi del record
+                values = record.values
+                for field_name, field_value in values.items():
+                    if field_name.startswith('servo') or field_name.startswith('pot') or field_name == 'servos_active_count':
+                        measurements[ts_key][field_name] = field_value
         
-        # Processa dati controlli
+        # Processa dati controlli e fa il merge per timestamp
         for table in controls_result:
             for record in table.records:
                 timestamp = record.get_time()
-                field = record.get_field()
-                value = record.get_value()
-                
                 ts_key = timestamp.isoformat()
-                if ts_key not in measurements:
-                    measurements[ts_key] = {
-                        'timestamp': timestamp,
-                        'time_str': timestamp.strftime('%H:%M:%S'),
-                        'date_str': timestamp.strftime('%d/%m/%Y')
-                    }
                 
-                measurements[ts_key][field] = value
+                # Se esiste già il timestamp dai servo, aggiungi i controlli
+                if ts_key in measurements:
+                    values = record.values
+                    for field_name, field_value in values.items():
+                        if field_name in ['button_pressed', 'led_state']:
+                            measurements[ts_key][field_name] = field_value
+                # Altrimenti crea nuovo record solo se vicino nel tempo
+                else:
+                    # Trova il timestamp servo più vicino (entro 15 secondi)
+                    for servo_ts_key in measurements.keys():
+                        servo_time = measurements[servo_ts_key]['timestamp']
+                        time_diff = abs((timestamp - servo_time).total_seconds())
+                        if time_diff <= 15:  # Entro 15 secondi
+                            values = record.values
+                            for field_name, field_value in values.items():
+                                if field_name in ['button_pressed', 'led_state']:
+                                    measurements[servo_ts_key][field_name] = field_value
+                            break
         
         # Converte in lista e ordina per timestamp (più recenti prima)
         measurements_list = list(measurements.values())
         measurements_list.sort(key=lambda x: x['timestamp'], reverse=True)
         
-        # Limita il numero di risultati
-        return measurements_list[:limit]
+        # Limita il numero di risultati e rimuovi record senza dati controllo
+        filtered_measurements = []
+        for measurement in measurements_list:
+            # Include solo se ha almeno i dati servo base
+            if 'servo1_angle' in measurement:
+                # Aggiungi valori di default per campi mancanti
+                measurement.setdefault('button_pressed', 0)
+                measurement.setdefault('led_state', 0)
+                measurement.setdefault('servos_active_count', 0)
+                filtered_measurements.append(measurement)
+                
+                if len(filtered_measurements) >= limit:
+                    break
+        
+        logger.info(f"📊 Tabella: {len(filtered_measurements)} record campionati ogni 30s")
+        return filtered_measurements
     
     except Exception as e:
-        logger.error(f"Errore query measurements: {e}")
+        logger.error(f"Errore query measurements campionate: {e}")
         return []
 
 def get_system_stats():

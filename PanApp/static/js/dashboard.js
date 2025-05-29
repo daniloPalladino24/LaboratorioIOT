@@ -457,41 +457,78 @@ function updateStatusBar(data) {
       activeServosElement.textContent = activeServos;
     }
 
-    // Aggiorna stato pulsante
+    // Aggiorna stato pulsante (LOGICA INVERTITA PER WEB APP)
+    // Inversione richiesta: button_pressed=1 → mostra "LIBERO"
+    //                      button_pressed=0 → mostra "PREMUTO"
     const buttonPressed = data.button_pressed;
     const buttonStatus = document.getElementById("buttonStatus");
     const buttonCard = document.getElementById("buttonCard");
 
     if (buttonStatus && buttonCard) {
-      buttonStatus.textContent = buttonPressed ? "PREMUTO" : "LIBERO";
+      // LOGICA INVERTITA: opposto di quello che arriva dal database
+      const invertedButtonState = !buttonPressed;
+      buttonStatus.textContent = invertedButtonState ? "PREMUTO" : "LIBERO";
 
-      if (buttonPressed) {
+      if (invertedButtonState) {
         buttonCard.classList.add("pressed");
       } else {
         buttonCard.classList.remove("pressed");
       }
     }
 
-    // Aggiorna stato LED
+    // Aggiorna stato LED (LOGICA FORZATA CORRETTA)
+    // CORREZIONE: Forziamo la logica corretta basandoci sul pulsante
+    // Quando pulsante NON premuto (0) → LED ACCESO
+    // Quando pulsante premuto (1) → LED SPENTO
     const ledState = data.led_state;
     const ledStatus = document.getElementById("ledStatus");
     const ledCard = document.getElementById("ledCard");
 
     if (ledStatus && ledCard) {
-      ledStatus.textContent = ledState ? "ACCESO" : "SPENTO";
+      // LOGICA CORRETTA: led_state dovrebbe essere opposto a button_pressed
+      const expectedLedState = !buttonPressed; // Inverti il pulsante
+      const displayLedState = ledState ? "ACCESO" : "SPENTO";
 
-      if (ledState) {
-        ledCard.classList.add("on");
+      // Se la logica dal database è corretta, usa led_state
+      // Se è invertita, usa expectedLedState
+      if (ledState === expectedLedState) {
+        // Logica corretta dal database
+        ledStatus.textContent = displayLedState;
+        if (ledState) {
+          ledCard.classList.add("on");
+        } else {
+          ledCard.classList.remove("on");
+        }
       } else {
-        ledCard.classList.remove("on");
+        // Logica invertita dal database - correggiamo
+        console.warn(
+          "⚠️ Logica LED invertita nel database - correzione applicata"
+        );
+        ledStatus.textContent = expectedLedState ? "ACCESO" : "SPENTO";
+        if (expectedLedState) {
+          ledCard.classList.add("on");
+        } else {
+          ledCard.classList.remove("on");
+        }
       }
     }
 
+    // Debug dettagliato per troubleshooting (AGGIORNATO CON LOGICA INVERTITA)
+    const ledPhysicalState = ledState ? "ACCESO" : "SPENTO";
+    const buttonPhysicalState = buttonPressed ? "DB_PRESSED" : "DB_FREE";
+    const buttonDisplayState = !buttonPressed ? "SHOW_PRESSED" : "SHOW_FREE";
+    const expectedState = !buttonPressed ? "ACCESO" : "SPENTO";
+
     console.log(
-      `🔘 Status: Button=${buttonPressed ? "PRESSED" : "FREE"}, LED=${
-        ledState ? "ON" : "OFF"
-      }, Active=${activeServos}`
+      `🔘 Status: Button_DB=${buttonPhysicalState}, Button_Display=${buttonDisplayState}, LED=${ledPhysicalState}, LED_Expected=${expectedState}, Active=${activeServos}`
     );
+
+    // Verifica che LED sia opposto al pulsante del database (logica corretta)
+    if (ledState !== !buttonPressed) {
+      console.warn(
+        `💡 LED Logic Mismatch: DB_Button=${buttonPressed}, LED=${ledState}, Expected=${!buttonPressed}`
+      );
+    }
   } catch (error) {
     console.error("❌ Errore aggiornamento status bar:", error);
   }
@@ -598,36 +635,48 @@ function updateTable(data) {
 
   try {
     tbody.innerHTML = data
-      .map(
-        (row) => `
-            <tr>
-                <td>${row.time_str || "-"}</td>
-                <td>${row.date_str || "-"}</td>
-                <td class="angle-cell">${formatValue(
-                  row.servo1_angle,
-                  "°"
-                )}</td>
-                <td class="angle-cell">${formatValue(
-                  row.servo2_angle,
-                  "°"
-                )}</td>
-                <td class="angle-cell">${formatValue(
-                  row.servo3_angle,
-                  "°"
-                )}</td>
-                <td class="pot-cell">${formatValue(row.pot1_percent, "%")}</td>
-                <td class="pot-cell">${formatValue(row.pot2_percent, "%")}</td>
-                <td class="pot-cell">${formatValue(row.pot3_percent, "%")}</td>
-                <td class="${row.button_pressed ? "btn-pressed" : ""}">${
-          row.button_pressed ? "PREMUTO" : "LIBERO"
-        }</td>
-                <td class="${row.led_state ? "led-on" : ""}">${
+      .map((row) => {
+        // LOGICA INVERTITA ANCHE PER LA TABELLA
+        const invertedButtonState = !row.button_pressed;
+        const buttonDisplayText = invertedButtonState ? "PREMUTO" : "LIBERO";
+        const buttonCssClass = invertedButtonState ? "btn-pressed" : "";
+
+        return `
+                <tr>
+                    <td>${row.time_str || "-"}</td>
+                    <td>${row.date_str || "-"}</td>
+                    <td class="angle-cell">${formatValue(
+                      row.servo1_angle,
+                      "°"
+                    )}</td>
+                    <td class="angle-cell">${formatValue(
+                      row.servo2_angle,
+                      "°"
+                    )}</td>
+                    <td class="angle-cell">${formatValue(
+                      row.servo3_angle,
+                      "°"
+                    )}</td>
+                    <td class="pot-cell">${formatValue(
+                      row.pot1_percent,
+                      "%"
+                    )}</td>
+                    <td class="pot-cell">${formatValue(
+                      row.pot2_percent,
+                      "%"
+                    )}</td>
+                    <td class="pot-cell">${formatValue(
+                      row.pot3_percent,
+                      "%"
+                    )}</td>
+                    <td class="${buttonCssClass}">${buttonDisplayText}</td>
+                    <td class="${row.led_state ? "led-on" : ""}">${
           row.led_state ? "ACCESO" : "SPENTO"
         }</td>
-                <td>${row.servos_active_count || 0}</td>
-            </tr>
-        `
-      )
+                    <td>${row.servos_active_count || 0}</td>
+                </tr>
+            `;
+      })
       .join("");
   } catch (error) {
     console.error("❌ Errore rendering tabella:", error);
@@ -640,7 +689,7 @@ function showTableLoading() {
   if (tbody) {
     tbody.innerHTML = `
             <tr>
-                <td colspan="11" class="loading">
+                <td colspan="9" class="loading">
                     <i class="fas fa-spinner fa-spin"></i> Caricamento dati...
                 </td>
             </tr>
@@ -653,7 +702,7 @@ function showTableError(errorMessage = "Errore sconosciuto") {
   if (tbody) {
     tbody.innerHTML = `
             <tr>
-                <td colspan="11" class="loading">
+                <td colspan="9" class="loading">
                     <i class="fas fa-exclamation-triangle"></i> Errore: ${errorMessage}
                 </td>
             </tr>
@@ -677,8 +726,6 @@ function exportTable() {
 
   try {
     const headers = [
-      "Ora",
-      "Data",
       "Servo1_Angle",
       "Servo2_Angle",
       "Servo3_Angle",
@@ -690,12 +737,13 @@ function exportTable() {
       "Servos_Active",
     ];
 
+    // Export anche i dati campionati (senza filtri aggiuntivi)
+    const exportData = tableData;
+
     const csvData = [
       headers.join(","),
-      ...tableData.map((row) =>
+      ...exportData.map((row) =>
         [
-          `"${row.time_str || ""}"`,
-          `"${row.date_str || ""}"`,
           row.servo1_angle || 0,
           row.servo2_angle || 0,
           row.servo3_angle || 0,
@@ -728,7 +776,10 @@ function exportTable() {
     document.body.removeChild(link);
 
     console.log("📄 Dati esportati in CSV");
-    showNotification(`Esportati ${tableData.length} record in CSV`, "success");
+    showNotification(
+      `Esportati ${exportData.length} record campionati (30s)`,
+      "success"
+    );
   } catch (error) {
     console.error("❌ Errore export CSV:", error);
     showNotification("Errore durante l'export", "error");
@@ -1132,6 +1183,7 @@ window.debugDashboard = {
       servos_active_count: 2,
     }
   ) => {
+    console.log("🧪 Test data (button_pressed=1 dovrebbe mostrare LIBERO):");
     updateServoDisplay(testData);
     updateCharts(testData);
   },
