@@ -9,7 +9,7 @@ let startTime = Date.now();
 let autoRefreshTimer;
 
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("🚀 Inizializzazione Dashboard...");
+  console.log("Inizializzazione Dashboard...");
 
   try {
     initializeSocket();
@@ -19,9 +19,9 @@ document.addEventListener("DOMContentLoaded", function () {
     loadInitialData();
     startAutoRefresh();
 
-    console.log("✅ Dashboard inizializzata correttamente");
+    console.log("Dashboard inizializzata correttamente");
   } catch (error) {
-    console.error("❌ Errore inizializzazione:", error);
+    console.error("Errore inizializzazione:", error);
     showNotification(
       "Errore durante l'inizializzazione della dashboard",
       "error"
@@ -35,13 +35,13 @@ function initializeSocket() {
 
     socket.on("connect", function () {
       updateConnectionStatus(true);
-      console.log("✅ WebSocket connesso");
+      console.log("WebSocket connesso");
       showNotification("Connesso al server", "success");
     });
 
     socket.on("disconnect", function () {
       updateConnectionStatus(false);
-      console.log("❌ WebSocket disconnesso");
+      console.log("WebSocket disconnesso");
       showNotification("Connessione persa", "error");
     });
 
@@ -63,20 +63,20 @@ function initializeSocket() {
           updateSystemStats(stats);
         }
       } catch (error) {
-        console.error("❌ Errore processamento dati WebSocket:", error);
+        console.error("Errore processamento dati WebSocket:", error);
       }
     });
 
     socket.on("status", function (data) {
-      console.log("📡 Status WebSocket:", data.message);
+      console.log("Status WebSocket:", data.message);
     });
 
     socket.on("error", function (error) {
-      console.error("❌ Errore WebSocket:", error);
+      console.error("Errore WebSocket:", error);
       updateConnectionStatus(false);
     });
   } catch (error) {
-    console.error("❌ Errore inizializzazione WebSocket:", error);
+    console.error("Errore inizializzazione WebSocket:", error);
     updateConnectionStatus(false);
   }
 }
@@ -272,9 +272,9 @@ function initializeCharts() {
       },
     });
 
-    console.log("📊 Grafici inizializzati correttamente");
+    console.log(" Grafici inizializzati correttamente");
   } catch (error) {
-    console.error("❌ Errore inizializzazione grafici:", error);
+    console.error(" Errore inizializzazione grafici:", error);
     showNotification("Errore inizializzazione grafici", "error");
   }
 }
@@ -320,7 +320,7 @@ function updateCharts(data) {
     potChart.data.datasets[2].data = potData.data3;
     potChart.update("none");
   } catch (error) {
-    console.error("❌ Errore aggiornamento grafici:", error);
+    console.error(" Errore aggiornamento grafici:", error);
   }
 }
 
@@ -341,21 +341,21 @@ function clearCharts() {
       potChart.update();
     }
 
-    console.log("📊 Grafici puliti");
+    console.log(" Grafici puliti");
     showNotification("Grafici puliti", "info");
   } catch (error) {
-    console.error("❌ Errore pulizia grafici:", error);
+    console.error(" Errore pulizia grafici:", error);
   }
 }
 
 function updateServoDisplay(data) {
   if (!data) {
-    console.warn("⚠️ Nessun dato ricevuto per aggiornamento display");
+    console.warn(" Nessun dato ricevuto per aggiornamento display");
     return;
   }
 
   try {
-    console.log("🔄 Aggiornamento display servo con:", data);
+    console.log(" Aggiornamento display servo con:", data);
 
     for (let i = 1; i <= 3; i++) {
       updateSingleServo(i, data);
@@ -363,7 +363,7 @@ function updateServoDisplay(data) {
 
     updateStatusBar(data);
   } catch (error) {
-    console.error("❌ Errore aggiornamento display servo:", error);
+    console.error(" Errore aggiornamento display servo:", error);
   }
 }
 
@@ -409,7 +409,7 @@ function updateSingleServo(servoNum, data) {
       }
     }
   } catch (error) {
-    console.error(`❌ Errore aggiornamento servo ${servoNum}:`, error);
+    console.error(` Errore aggiornamento servo ${servoNum}:`, error);
   }
 }
 
@@ -455,7 +455,7 @@ function updateStatusBar(data) {
         }
       } else {
         console.warn(
-          "⚠️ Logica LED invertita nel database - correzione applicata"
+          "Logica LED invertita nel database - correzione applicata"
         );
         ledStatus.textContent = expectedLedState ? "ACCESO" : "SPENTO";
         if (expectedLedState) {
@@ -472,17 +472,17 @@ function updateStatusBar(data) {
     const expectedState = !buttonPressed ? "ACCESO" : "SPENTO";
 
     console.log(
-      `🔘 Status: Button_DB=${buttonPhysicalState}, Button_Display=${buttonDisplayState}, LED=${ledPhysicalState}, LED_Expected=${expectedState}, Active=${activeServos}`
+      `Status: Button_DB=${buttonPhysicalState}, Button_Display=${buttonDisplayState}, LED=${ledPhysicalState}, LED_Expected=${expectedState}, Active=${activeServos}`
     );
 
 
     if (ledState !== !buttonPressed) {
       console.warn(
-        `💡 LED Logic Mismatch: DB_Button=${buttonPressed}, LED=${ledState}, Expected=${!buttonPressed}`
+        `LED Logic Mismatch: DB_Button=${buttonPressed}, LED=${ledState}, Expected=${!buttonPressed}`
       );
     }
   } catch (error) {
-    console.error("❌ Errore aggiornamento status bar:", error);
+    console.error("Errore aggiornamento status bar:", error);
   }
 }
 
@@ -524,7 +524,7 @@ function updateSystemStats(stats) {
         .padStart(2, "0")}`;
     }
   } catch (error) {
-    console.error("❌ Errore aggiornamento statistiche sistema:", error);
+    console.error("Errore aggiornamento statistiche sistema:", error);
   }
 }
 
@@ -533,7 +533,7 @@ function refreshTable() {
     const limitSelect = document.getElementById("tableLimit");
     const limit = limitSelect ? limitSelect.value : 50;
 
-    console.log(`📋 Caricamento tabella con ${limit} record...`);
+    console.log(`Caricamento tabella con ${limit} record...`);
 
     showTableLoading();
 
@@ -547,15 +547,15 @@ function refreshTable() {
       .then((data) => {
         tableData = data;
         updateTable(data);
-        console.log(`✅ Tabella aggiornata con ${data.length} record`);
+        console.log(`Tabella aggiornata con ${data.length} record`);
       })
       .catch((error) => {
-        console.error("❌ Errore caricamento tabella:", error);
+        console.error("Errore caricamento tabella:", error);
         showTableError(error.message);
         showNotification("Errore caricamento tabella", "error");
       });
   } catch (error) {
-    console.error("❌ Errore refresh tabella:", error);
+    console.error("Errore refresh tabella:", error);
     showTableError(error.message);
   }
 }
@@ -563,7 +563,7 @@ function refreshTable() {
 function updateTable(data) {
   const tbody = document.getElementById("tableBody");
   if (!tbody) {
-    console.error("❌ Elemento tableBody non trovato");
+    console.error("Elemento tableBody non trovato");
     return;
   }
 
@@ -623,7 +623,7 @@ function updateTable(data) {
       })
       .join("");
   } catch (error) {
-    console.error("❌ Errore rendering tabella:", error);
+    console.error("Errore rendering tabella:", error);
     showTableError("Errore rendering dati");
   }
 }
@@ -718,13 +718,13 @@ function exportTable() {
     link.click();
     document.body.removeChild(link);
 
-    console.log("📄 Dati esportati in CSV");
+    console.log("Dati esportati in CSV");
     showNotification(
       `Esportati ${exportData.length} record campionati (30s)`,
       "success"
     );
   } catch (error) {
-    console.error("❌ Errore export CSV:", error);
+    console.error("Errore export CSV:", error);
     showNotification("Errore durante l'export", "error");
   }
 }
@@ -739,7 +739,7 @@ function showSection(sectionId) {
     if (targetSection) {
       targetSection.classList.add("active");
     } else {
-      console.error(`❌ Sezione '${sectionId}' non trovata`);
+      console.error(`Sezione '${sectionId}' non trovata`);
       return;
     }
 
@@ -763,9 +763,9 @@ function showSection(sectionId) {
       }, 100);
     }
 
-    console.log(`📍 Sezione attiva: ${sectionId}`);
+    console.log(`Sezione attiva: ${sectionId}`);
   } catch (error) {
-    console.error("❌ Errore cambio sezione:", error);
+    console.error("Errore cambio sezione:", error);
   }
 }
 
@@ -780,7 +780,7 @@ function initializeEventListeners() {
         } else {
           stopAutoRefresh();
         }
-        console.log(`🔄 Auto refresh: ${autoRefreshEnabled ? "ON" : "OFF"}`);
+        console.log(`Auto refresh: ${autoRefreshEnabled ? "ON" : "OFF"}`);
         showNotification(
           `Auto refresh ${autoRefreshEnabled ? "attivato" : "disattivato"}`,
           "info"
@@ -795,7 +795,7 @@ function initializeEventListeners() {
         if (autoRefreshEnabled) {
           startAutoRefresh();
         }
-        console.log(`⏱️ Intervallo aggiornamento: ${refreshInterval / 1000}s`);
+        console.log(`Intervallo aggiornamento: ${refreshInterval / 1000}s`);
         showNotification(
           `Intervallo aggiornato: ${refreshInterval / 1000}s`,
           "info"
@@ -807,7 +807,7 @@ function initializeEventListeners() {
     if (darkThemeToggle) {
       darkThemeToggle.addEventListener("change", function (e) {
         document.body.classList.toggle("dark-theme", e.target.checked);
-        console.log(`🌙 Tema scuro: ${e.target.checked ? "ON" : "OFF"}`);
+        console.log(`Tema scuro: ${e.target.checked ? "ON" : "OFF"}`);
         showNotification(
           `Tema ${e.target.checked ? "scuro" : "chiaro"} attivato`,
           "info"
@@ -815,9 +815,9 @@ function initializeEventListeners() {
       });
     }
 
-    console.log("👂 Event listeners inizializzati");
+    console.log("Event listeners inizializzati");
   } catch (error) {
-    console.error("❌ Errore inizializzazione event listeners:", error);
+    console.error("Errore inizializzazione event listeners:", error);
   }
 }
 
@@ -832,11 +832,11 @@ function startAutoRefresh() {
           refreshTable();
         }
       } catch (error) {
-        console.error("❌ Errore auto refresh:", error);
+        console.error("Errore auto refresh:", error);
       }
     }, refreshInterval);
 
-    console.log(`🔄 Auto refresh avviato (${refreshInterval / 1000}s)`);
+    console.log(`Auto refresh avviato (${refreshInterval / 1000}s)`);
   }
 }
 
@@ -844,12 +844,12 @@ function stopAutoRefresh() {
   if (autoRefreshTimer) {
     clearInterval(autoRefreshTimer);
     autoRefreshTimer = null;
-    console.log("⏹️ Auto refresh fermato");
+    console.log("Auto refresh fermato");
   }
 }
 
 function loadInitialData() {
-  console.log("📦 Caricamento dati iniziali...");
+  console.log("Caricamento dati iniziali...");
 
   fetch("/api/latest")
     .then((response) => {
@@ -860,10 +860,10 @@ function loadInitialData() {
     })
     .then((data) => {
       updateServoDisplay(data);
-      console.log("✅ Dati servo iniziali caricati");
+      console.log("Dati servo iniziali caricati");
     })
     .catch((error) => {
-      console.error("❌ Errore caricamento dati servo iniziali:", error);
+      console.error("Errore caricamento dati servo iniziali:", error);
       showNotification("Errore caricamento dati iniziali", "warning");
     });
 
@@ -882,10 +882,10 @@ function loadInitialData() {
     })
     .then((stats) => {
       updateSystemStats(stats);
-      console.log("✅ Statistiche iniziali caricate");
+      console.log("Statistiche iniziali caricate");
     })
     .catch((error) => {
-      console.error("❌ Errore caricamento statistiche iniziali:", error);
+      console.error("Errore caricamento statistiche iniziali:", error);
     });
 }
 
@@ -960,7 +960,7 @@ function showNotification(message, type = "info") {
       closeNotification(notification.querySelector(".notification-close"));
     }, 5000);
   } catch (error) {
-    console.error("❌ Errore creazione notifica:", error);
+    console.error("Errore creazione notifica:", error);
   }
 }
 
@@ -986,14 +986,14 @@ function closeNotification(closeButton) {
       }, 300);
     }
   } catch (error) {
-    console.error("❌ Errore chiusura notifica:", error);
+    console.error("Errore chiusura notifica:", error);
   }
 }
 
 function safeGetElement(id) {
   const element = document.getElementById(id);
   if (!element) {
-    console.warn(`⚠️ Elemento con ID '${id}' non trovato`);
+    console.warn(`Elemento con ID '${id}' non trovato`);
   }
   return element;
 }
@@ -1022,7 +1022,7 @@ function throttle(func, limit) {
 }
 
 window.addEventListener("error", function (event) {
-  console.error("❌ Errore JavaScript globale:", event.error);
+  console.error("Errore JavaScript globale:", event.error);
   showNotification("Si è verificato un errore imprevisto", "error");
 });
 
@@ -1032,9 +1032,9 @@ window.addEventListener(
     try {
       if (servoChart) servoChart.resize();
       if (potChart) potChart.resize();
-      console.log("📐 Grafici ridimensionati");
+      console.log("Grafici ridimensionati");
     } catch (error) {
-      console.error("❌ Errore ridimensionamento grafici:", error);
+      console.error("Errore ridimensionamento grafici:", error);
     }
   }, 250)
 );
@@ -1073,7 +1073,7 @@ window.debugDashboard = {
       servos_active_count: 2,
     }
   ) => {
-    console.log("🧪 Test data (button_pressed=1 dovrebbe mostrare LIBERO):");
+    console.log("Test data (button_pressed=1 dovrebbe mostrare LIBERO):");
     updateServoDisplay(testData);
     updateCharts(testData);
   },
@@ -1109,15 +1109,15 @@ window.addEventListener("beforeunload", function () {
     if (socket) {
       socket.disconnect();
     }
-    console.log("🧹 Cleanup completato");
+    console.log("Cleanup completato");
   } catch (error) {
-    console.error("❌ Errore durante cleanup:", error);
+    console.error("Errore durante cleanup:", error);
   }
 });
 
-console.log("🎛️ Dashboard JavaScript caricato completamente");
-console.log("🔧 Usa window.debugDashboard per funzioni di debug");
-console.log("📊 Grafici disponibili:", {
+console.log("Dashboard JavaScript caricato completamente");
+console.log("Usa window.debugDashboard per funzioni di debug");
+console.log("Grafici disponibili:", {
   servo: !!window.servoChart,
   pot: !!window.potChart,
 });
