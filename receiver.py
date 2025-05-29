@@ -108,7 +108,7 @@ def parse_radio_message(message):
 
 def initialize_servos():
     """Inizializza tutti i servo alla posizione 180 gradi (ora che è specchiato)"""
-    max_pwm = angle_to_pwm(180)  # 180 gradi = posizione iniziale con movimento specchiato
+    max_pwm = angle_to_pwm(0)  # 180 gradi = posizione iniziale con movimento specchiato
     
     pin8.write_analog(max_pwm)   # Servo 1 a 180°
     pin12.write_analog(max_pwm)  # Servo 2 a 180°
@@ -198,6 +198,3 @@ while True:
             initialize_servos()
             # Spegni il LED quando si perde la connessione
             control_led(0)  # 0 = pulsante non premuto, quindi LED acceso con logica invertita
-    
-    # Refresh veloce
-    sleep(10)

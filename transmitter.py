@@ -100,6 +100,3 @@ while True:
         # Debug via seriale
         print("TX: P1={} P2={} P3={} BTN={}".format(
             pot1_value, pot2_value, pot3_value, button_state))
-    
-    # Refresh veloce
-    sleep(10)
