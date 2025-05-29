@@ -30,21 +30,20 @@ radio.config(channel=42, power=7, length=100)  # Stesso canale del trasmettitore
 # ===========================================
 
 def pot_to_angle(pot_value):
-    """Converte valore potenziometro grezzo (0-1023) in angolo servo (0-180°)
+    """Converte valore potenziometro grezzo (0-1023) in angolo servo (0-180°) SPECCHIATO
     
-    Logica corretta:
+    Logica:
     - I potenziometri hanno una rotazione fisica di circa 270°-300°
-    - Vogliamo che solo gli ultimi 180° del potenziometro controllino il servo
-    - 512-1023 del potenziometro corrispondono a 0-180° del servo
-    - Se il potenziometro è sotto 512, il servo rimane a 0°
+    - Vogliamo che solo i primi 180° del potenziometro controllino il servo
+    - 180° del potenziometro corrispondono a circa 512 del valore digitale (0-1023)
+    - MOVIMENTO SPECCHIATO: 0 del potenziometro → 180° del servo, 512 del potenziometro → 0° del servo
+    - Se il potenziometro supera 512, il servo rimane a 0°
     """
-    # Se il potenziometro è sotto 512, l'angolo è 0°
-    if pot_value < 512:
-        return 0
+    # Limita il valore del potenziometro a massimo 512 (primi 180° di rotazione)
+    limited_pot_value = min(pot_value, 512)
     
-    # Converte 512-1023 del potenziometro in 0-180° del servo
-    # Sottrae 512 per partire da 0, poi scala su 511 (1023-512)
-    angle = ((pot_value - 512) / 511) * 180
+    # Converte 0-512 del potenziometro in 180-0° del servo (SPECCHIATO)
+    angle = 180 - (limited_pot_value / 512) * 180
     
     return angle
 
@@ -57,7 +56,7 @@ def angle_to_pwm(angle):
 
 def control_servos(pot1_val, pot2_val, pot3_val):
     """Controlla tutti e tre i servo basandosi sui valori ricevuti"""
-    # Calcola angoli (replica fedele da 512 a 1023 → 0° a 180°)
+    # Calcola angoli (replica fedele fino a 180°)
     angle1 = pot_to_angle(pot1_val)
     angle2 = pot_to_angle(pot2_val)
     angle3 = pot_to_angle(pot3_val)
@@ -108,14 +107,14 @@ def parse_radio_message(message):
         return 0, 0, 0, 0, False
 
 def initialize_servos():
-    """Inizializza tutti i servo alla posizione 0 gradi"""
-    zero_pwm = angle_to_pwm(0)  # 0 gradi = posizione minima
+    """Inizializza tutti i servo alla posizione 180 gradi (ora che è specchiato)"""
+    max_pwm = angle_to_pwm(180)  # 180 gradi = posizione iniziale con movimento specchiato
     
-    pin8.write_analog(zero_pwm)   # Servo 1 a 0°
-    pin12.write_analog(zero_pwm)  # Servo 2 a 0°
-    pin16.write_analog(zero_pwm)  # Servo 3 a 0°
+    pin8.write_analog(max_pwm)   # Servo 1 a 180°
+    pin12.write_analog(max_pwm)  # Servo 2 a 180°
+    pin16.write_analog(max_pwm)  # Servo 3 a 180°
     
-    print("ALL_SERVOS_TO_ZERO")
+    print("ALL_SERVOS_TO_180_MIRRORED")
 
 def show_connection_status(connected):
     """Mostra stato connessione radio"""
@@ -171,7 +170,7 @@ while True:
             current_pot3 = pot3_val
             current_button = button_state
             
-            # Controlla servo (replica fedele da 512 a 1023 → 0° a 180°)
+            # Controlla servo (replica fedele fino a 180°)
             angle1, angle2, angle3 = control_servos(pot1_val, pot2_val, pot3_val)
             
             # Controlla LED esterno
@@ -181,12 +180,12 @@ while True:
             last_receive_time = current_time
             is_connected = True
             
-            # Debug con indicazione dei valori grezzi e angoli risultanti
-            pot1_status = "" if pot1_val >= 512 else " (STOP)"
-            pot2_status = "" if pot2_val >= 512 else " (STOP)"
-            pot3_status = "" if pot3_val >= 512 else " (STOP)"
+            # Debug con indicazione dei valori grezzi e angoli risultanti (specchiati)
+            pot1_status = "[LIMIT]" if pot1_val > 512 else ""
+            pot2_status = "[LIMIT]" if pot2_val > 512 else ""
+            pot3_status = "[LIMIT]" if pot3_val > 512 else ""
             
-            print("RX: P1={}{} P2={}{} P3={}{} BTN={} → A1={}° A2={}° A3={}° LED={}".format(
+            print("RX: P1={}{} P2={}{} P3={}{} BTN={} → A1={}° A2={}° A3={}° LED={} [MIRRORED]".format(
                 pot1_val, pot1_status, pot2_val, pot2_status, pot3_val, pot3_status,
                 button_state, round(angle1), round(angle2), round(angle3), 1-button_state))
     
