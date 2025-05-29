@@ -26,17 +26,12 @@ pin5.set_pull(pin5.PULL_DOWN)  # Pull-down interno per evitare fluttuazioni
 # FUNZIONI LETTURA POTENZIOMETRI E PULSANTE
 # ===========================================
 def read_potentiometers():
-    """Legge tutti e tre i potenziometri e limita a metà corsa (0-512)"""
+    """Legge tutti e tre i potenziometri - valori grezzi 0-1023"""
     pot1_raw = pin0.read_analog()  # Potenziometro 1 (0-1023)
     pot2_raw = pin1.read_analog()  # Potenziometro 2 (0-1023)
     pot3_raw = pin2.read_analog()  # Potenziometro 3 (0-1023)
     
-    # Limita a metà corsa e riscala a 0-1023 per compatibilità
-    pot1 = min(pot1_raw, 512) * 2  # Solo primi 180° del pot = 0-1023 per servo
-    pot2 = min(pot2_raw, 512) * 2  # Solo primi 180° del pot = 0-1023 per servo  
-    pot3 = min(pot3_raw, 512) * 2  # Solo primi 180° del pot = 0-1023 per servo
-    
-    return pot1, pot2, pot3
+    return pot1_raw, pot2_raw, pot3_raw
 
 def read_button():
     """Legge lo stato del pulsante sul PIN5"""
@@ -84,7 +79,7 @@ last_values = [0, 0, 0, 0]  # Per rilevare cambiamenti (pot1, pot2, pot3, button
 while True:
     current_time = running_time()
     
-    # Leggi potenziometri
+    # Leggi potenziometri (valori grezzi 0-1023)
     pot1_value, pot2_value, pot3_value = read_potentiometers()
     
     # Leggi stato pulsante

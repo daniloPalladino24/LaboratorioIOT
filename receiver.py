@@ -30,8 +30,22 @@ radio.config(channel=42, power=7, length=100)  # Stesso canale del trasmettitore
 # ===========================================
 
 def pot_to_angle(pot_value):
-    """Converte valore potenziometro (0-1023) in angolo servo (0-180°)"""
-    angle = (pot_value / 1023) * 180
+    """Converte valore potenziometro grezzo (0-1023) in angolo servo (0-180°)
+    
+    Logica corretta:
+    - I potenziometri hanno una rotazione fisica di circa 270°-300°
+    - Vogliamo che solo gli ultimi 180° del potenziometro controllino il servo
+    - 512-1023 del potenziometro corrispondono a 0-180° del servo
+    - Se il potenziometro è sotto 512, il servo rimane a 0°
+    """
+    # Se il potenziometro è sotto 512, l'angolo è 0°
+    if pot_value < 512:
+        return 0
+    
+    # Converte 512-1023 del potenziometro in 0-180° del servo
+    # Sottrae 512 per partire da 0, poi scala su 511 (1023-512)
+    angle = ((pot_value - 512) / 511) * 180
+    
     return angle
 
 def angle_to_pwm(angle):
@@ -43,7 +57,7 @@ def angle_to_pwm(angle):
 
 def control_servos(pot1_val, pot2_val, pot3_val):
     """Controlla tutti e tre i servo basandosi sui valori ricevuti"""
-    # Calcola angoli
+    # Calcola angoli (replica fedele da 512 a 1023 → 0° a 180°)
     angle1 = pot_to_angle(pot1_val)
     angle2 = pot_to_angle(pot2_val)
     angle3 = pot_to_angle(pot3_val)
@@ -94,14 +108,14 @@ def parse_radio_message(message):
         return 0, 0, 0, 0, False
 
 def initialize_servos():
-    """Inizializza tutti i servo alla posizione centrale"""
-    center_pwm = angle_to_pwm(90)  # 90 gradi = centro
+    """Inizializza tutti i servo alla posizione 0 gradi"""
+    zero_pwm = angle_to_pwm(0)  # 0 gradi = posizione minima
     
-    pin8.write_analog(center_pwm)   # Servo 1 centro
-    pin12.write_analog(center_pwm)  # Servo 2 centro
-    pin16.write_analog(center_pwm)  # Servo 3 centro
+    pin8.write_analog(zero_pwm)   # Servo 1 a 0°
+    pin12.write_analog(zero_pwm)  # Servo 2 a 0°
+    pin16.write_analog(zero_pwm)  # Servo 3 a 0°
     
-    print("ALL_SERVOS_CENTERED")
+    print("ALL_SERVOS_TO_ZERO")
 
 def show_connection_status(connected):
     """Mostra stato connessione radio"""
@@ -119,7 +133,7 @@ print("RECEIVER_INIT")
 # Spegni display completamente
 display.off()
 
-# Inizializza servo al centro
+# Inizializza servo a 0 gradi
 initialize_servos()
 sleep(2000)  # Attesa per posizionamento
 
@@ -134,10 +148,10 @@ last_receive_time = 0
 connection_timeout = 2000  # 2 secondi senza dati = disconnesso
 is_connected = False
 
-# Valori servo correnti
-current_pot1 = 512  # Valore centrale iniziale
-current_pot2 = 512
-current_pot3 = 512
+# Valori servo correnti (iniziano da 0)
+current_pot1 = 0  # Valore 0 iniziale
+current_pot2 = 0
+current_pot3 = 0
 current_button = 0  # Pulsante inizialmente rilasciato
 
 while True:
@@ -157,7 +171,7 @@ while True:
             current_pot3 = pot3_val
             current_button = button_state
             
-            # Controlla servo
+            # Controlla servo (replica fedele da 512 a 1023 → 0° a 180°)
             angle1, angle2, angle3 = control_servos(pot1_val, pot2_val, pot3_val)
             
             # Controlla LED esterno
@@ -167,17 +181,21 @@ while True:
             last_receive_time = current_time
             is_connected = True
             
-            # Debug
-            print("RX: P1={} P2={} P3={} BTN={} | A1={} A2={} A3={} LED={}".format(
-                pot1_val, pot2_val, pot3_val, button_state,
-                round(angle1), round(angle2), round(angle3), 1-button_state))
+            # Debug con indicazione dei valori grezzi e angoli risultanti
+            pot1_status = "" if pot1_val >= 512 else " (STOP)"
+            pot2_status = "" if pot2_val >= 512 else " (STOP)"
+            pot3_status = "" if pot3_val >= 512 else " (STOP)"
+            
+            print("RX: P1={}{} P2={}{} P3={}{} BTN={} → A1={}° A2={}° A3={}° LED={}".format(
+                pot1_val, pot1_status, pot2_val, pot2_status, pot3_val, pot3_status,
+                button_state, round(angle1), round(angle2), round(angle3), 1-button_state))
     
     # Controlla timeout connessione
     if current_time - last_receive_time > connection_timeout:
         if is_connected:
             is_connected = False
             print("CONNECTION_LOST")
-            # Torna al centro quando si perde la connessione
+            # Torna a 0 gradi quando si perde la connessione
             initialize_servos()
             # Spegni il LED quando si perde la connessione
             control_led(0)  # 0 = pulsante non premuto, quindi LED acceso con logica invertita
