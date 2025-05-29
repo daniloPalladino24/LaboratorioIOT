@@ -15,16 +15,8 @@ pin8.set_analog_period(20)
 pin12.set_analog_period(20)
 pin16.set_analog_period(20)
 
-pin14.write_digital(1)
-
 radio.on()
 radio.config(channel=42, power=7, length=100)
-
-def initialize_servos():
-    min_pwm = angle_to_pwm(0)
-    pin8.write_analog(min_pwm)
-    pin12.write_analog(min_pwm)
-    pin16.write_analog(min_pwm)
 
 def parse_radio_message(message):
     try:
@@ -64,14 +56,14 @@ def pot_to_angle(pot_value):
     return angle
 
 def angle_to_pwm(angle):
-    pwm_value = int((angle / 180) * (128 - 26)) + 26
+    pwm_value = int((angle / 180) * (128 - 26)) + 26   #128 = Max PWM, 26 = Min PWM
     return pwm_value
 
-def control_led(button_state):
-    inverted_state = 1 - button_state
-    pin14.write_digital(inverted_state)
-    return inverted_state
-
+def initialize_servos():
+    min_pwm = angle_to_pwm(0)
+    pin8.write_analog(min_pwm)
+    pin12.write_analog(min_pwm)
+    pin16.write_analog(min_pwm)
 
 display.off()
 initialize_servos()
@@ -94,17 +86,15 @@ while True:
             current_pot1 = pot1_val
             current_pot2 = pot2_val
             current_pot3 = pot3_val
-            current_button = button_state
             angle1, angle2, angle3 = control_servos(pot1_val, pot2_val, pot3_val)
-            led_state = control_led(button_state)
             last_receive_time = current_time
+            led_state = button_state
             is_connected = True
             print("RX: P1={} P2={} P3={} BTN={} → A1={}° A2={}° A3={}° LED={}".format(
                 pot1_val, pot2_val, pot3_val,
-                button_state, round(angle1), round(angle2), round(angle3), 1-button_state))
+                button_state, round(angle1), round(angle2), round(angle3), led_state))
             
     if current_time - last_receive_time > connection_timeout:
         if is_connected:
             is_connected = False
             initialize_servos()
-            control_led(0)
