@@ -1,8 +1,3 @@
-// ===========================================
-// SERVO CONTROLLER DASHBOARD - JAVASCRIPT
-// ===========================================
-
-// Variabili globali
 let socket;
 let servoChart, potChart;
 let servoData = { labels: [], data1: [], data2: [], data3: [] };
@@ -13,9 +8,6 @@ let refreshInterval = 2000;
 let startTime = Date.now();
 let autoRefreshTimer;
 
-// ===========================================
-// INIZIALIZZAZIONE PRINCIPALE
-// ===========================================
 document.addEventListener("DOMContentLoaded", function () {
   console.log("🚀 Inizializzazione Dashboard...");
 
@@ -37,9 +29,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 
-// ===========================================
-// WEBSOCKET CONNECTION
-// ===========================================
 function initializeSocket() {
   try {
     socket = io();
@@ -64,8 +53,6 @@ function initializeSocket() {
         if (data) {
           updateServoDisplay(data);
           updateCharts(data);
-
-          // Animazione di aggiornamento
           document.querySelectorAll(".servo-card").forEach((card) => {
             card.classList.add("data-update");
             setTimeout(() => card.classList.remove("data-update"), 300);
@@ -106,12 +93,9 @@ function updateConnectionStatus(connected) {
   }
 }
 
-// ===========================================
-// INIZIALIZZAZIONE GRAFICI
-// ===========================================
 function initializeCharts() {
   try {
-    // Configurazione comune per entrambi i grafici
+
     const commonOptions = {
       responsive: true,
       maintainAspectRatio: false,
@@ -120,7 +104,7 @@ function initializeCharts() {
         mode: "index",
       },
       animation: {
-        duration: 0, // Disabilita animazioni per performance
+        duration: 0,
       },
       plugins: {
         legend: {
@@ -166,7 +150,6 @@ function initializeCharts() {
       },
     };
 
-    // Grafico Angoli Servo
     const servoCtx = document.getElementById("servoChart");
     if (!servoCtx) {
       throw new Error("Canvas servoChart non trovato");
@@ -228,7 +211,6 @@ function initializeCharts() {
       },
     });
 
-    // Grafico Potenziometri
     const potCtx = document.getElementById("potChart");
     if (!potCtx) {
       throw new Error("Canvas potChart non trovato");
@@ -297,16 +279,12 @@ function initializeCharts() {
   }
 }
 
-// ===========================================
-// AGGIORNAMENTO GRAFICI
-// ===========================================
 function updateCharts(data) {
   if (!data || !servoChart || !potChart) return;
 
   try {
     const now = new Date().toLocaleTimeString();
 
-    // Mantieni solo gli ultimi 50 punti per performance
     const maxDataPoints = 50;
 
     if (servoData.labels.length >= maxDataPoints) {
@@ -320,7 +298,6 @@ function updateCharts(data) {
       potData.data3.shift();
     }
 
-    // Aggiungi nuovi dati
     servoData.labels.push(now);
     servoData.data1.push(data.servo1_angle || 0);
     servoData.data2.push(data.servo2_angle || 0);
@@ -331,14 +308,12 @@ function updateCharts(data) {
     potData.data2.push(data.pot2_percent || 0);
     potData.data3.push(data.pot3_percent || 0);
 
-    // Aggiorna grafico servo
     servoChart.data.labels = servoData.labels;
     servoChart.data.datasets[0].data = servoData.data1;
     servoChart.data.datasets[1].data = servoData.data2;
     servoChart.data.datasets[2].data = servoData.data3;
     servoChart.update("none");
 
-    // Aggiorna grafico potenziometri
     potChart.data.labels = potData.labels;
     potChart.data.datasets[0].data = potData.data1;
     potChart.data.datasets[1].data = potData.data2;
@@ -351,11 +326,9 @@ function updateCharts(data) {
 
 function clearCharts() {
   try {
-    // Reset dati
     servoData = { labels: [], data1: [], data2: [], data3: [] };
     potData = { labels: [], data1: [], data2: [], data3: [] };
 
-    // Reset grafici
     if (servoChart) {
       servoChart.data.labels = [];
       servoChart.data.datasets.forEach((dataset) => (dataset.data = []));
@@ -375,9 +348,6 @@ function clearCharts() {
   }
 }
 
-// ===========================================
-// AGGIORNAMENTO DISPLAY SERVO
-// ===========================================
 function updateServoDisplay(data) {
   if (!data) {
     console.warn("⚠️ Nessun dato ricevuto per aggiornamento display");
@@ -387,12 +357,10 @@ function updateServoDisplay(data) {
   try {
     console.log("🔄 Aggiornamento display servo con:", data);
 
-    // Aggiorna ogni servo (1, 2, 3)
     for (let i = 1; i <= 3; i++) {
       updateSingleServo(i, data);
     }
 
-    // Aggiorna barra di stato globale
     updateStatusBar(data);
   } catch (error) {
     console.error("❌ Errore aggiornamento display servo:", error);
@@ -407,7 +375,6 @@ function updateSingleServo(servoNum, data) {
     const pwm = data[`servo${servoNum}_pwm`] || 26;
     const isActive = data[`servo${servoNum}_active`] || 0;
 
-    // Aggiorna valori numerici
     const angleElement = document.getElementById(`angle${servoNum}`);
     const potElement = document.getElementById(`pot${servoNum}`);
     const pwmElement = document.getElementById(`pwm${servoNum}`);
@@ -416,7 +383,6 @@ function updateSingleServo(servoNum, data) {
     if (potElement) potElement.textContent = Math.round(potPercent);
     if (pwmElement) pwmElement.textContent = pwm;
 
-    // Aggiorna barra di progresso
     const progressFill = document.getElementById(`progress${servoNum}`);
     const progressThumb = document.getElementById(`thumb${servoNum}`);
 
@@ -425,10 +391,9 @@ function updateSingleServo(servoNum, data) {
     }
 
     if (progressThumb) {
-      progressThumb.style.left = `calc(${anglePercent}% - 8px)`; // -8px per centrare il thumb
+      progressThumb.style.left = `calc(${anglePercent}% - 8px)`; 
     }
 
-    // Aggiorna stato attivo del servo
     const servoCard = document.getElementById(`servo${servoNum}`);
     const badge = document.getElementById(`badge${servoNum}`);
 
@@ -450,22 +415,19 @@ function updateSingleServo(servoNum, data) {
 
 function updateStatusBar(data) {
   try {
-    // Aggiorna contatore servo attivi
+
     const activeServos = data.servos_active_count || 0;
     const activeServosElement = document.getElementById("activeServos");
     if (activeServosElement) {
       activeServosElement.textContent = activeServos;
     }
 
-    // Aggiorna stato pulsante (LOGICA INVERTITA PER WEB APP)
-    // Inversione richiesta: button_pressed=1 → mostra "LIBERO"
-    //                      button_pressed=0 → mostra "PREMUTO"
     const buttonPressed = data.button_pressed;
     const buttonStatus = document.getElementById("buttonStatus");
     const buttonCard = document.getElementById("buttonCard");
 
     if (buttonStatus && buttonCard) {
-      // LOGICA INVERTITA: opposto di quello che arriva dal database
+
       const invertedButtonState = !buttonPressed;
       buttonStatus.textContent = invertedButtonState ? "PREMUTO" : "LIBERO";
 
@@ -476,23 +438,15 @@ function updateStatusBar(data) {
       }
     }
 
-    // Aggiorna stato LED (LOGICA FORZATA CORRETTA)
-    // CORREZIONE: Forziamo la logica corretta basandoci sul pulsante
-    // Quando pulsante NON premuto (0) → LED ACCESO
-    // Quando pulsante premuto (1) → LED SPENTO
     const ledState = data.led_state;
     const ledStatus = document.getElementById("ledStatus");
     const ledCard = document.getElementById("ledCard");
 
     if (ledStatus && ledCard) {
-      // LOGICA CORRETTA: led_state dovrebbe essere opposto a button_pressed
-      const expectedLedState = !buttonPressed; // Inverti il pulsante
+      const expectedLedState = !buttonPressed;
       const displayLedState = ledState ? "ACCESO" : "SPENTO";
 
-      // Se la logica dal database è corretta, usa led_state
-      // Se è invertita, usa expectedLedState
       if (ledState === expectedLedState) {
-        // Logica corretta dal database
         ledStatus.textContent = displayLedState;
         if (ledState) {
           ledCard.classList.add("on");
@@ -500,7 +454,6 @@ function updateStatusBar(data) {
           ledCard.classList.remove("on");
         }
       } else {
-        // Logica invertita dal database - correggiamo
         console.warn(
           "⚠️ Logica LED invertita nel database - correzione applicata"
         );
@@ -513,7 +466,6 @@ function updateStatusBar(data) {
       }
     }
 
-    // Debug dettagliato per troubleshooting (AGGIORNATO CON LOGICA INVERTITA)
     const ledPhysicalState = ledState ? "ACCESO" : "SPENTO";
     const buttonPhysicalState = buttonPressed ? "DB_PRESSED" : "DB_FREE";
     const buttonDisplayState = !buttonPressed ? "SHOW_PRESSED" : "SHOW_FREE";
@@ -523,7 +475,7 @@ function updateStatusBar(data) {
       `🔘 Status: Button_DB=${buttonPhysicalState}, Button_Display=${buttonDisplayState}, LED=${ledPhysicalState}, LED_Expected=${expectedState}, Active=${activeServos}`
     );
 
-    // Verifica che LED sia opposto al pulsante del database (logica corretta)
+
     if (ledState !== !buttonPressed) {
       console.warn(
         `💡 LED Logic Mismatch: DB_Button=${buttonPressed}, LED=${ledState}, Expected=${!buttonPressed}`
@@ -536,7 +488,6 @@ function updateStatusBar(data) {
 
 function updateSystemStats(stats) {
   try {
-    // Aggiorna messaggi per ora
     if (stats.messages_last_hour !== undefined) {
       const totalMessages = document.getElementById("totalMessages");
       if (totalMessages) {
@@ -544,7 +495,6 @@ function updateSystemStats(stats) {
       }
     }
 
-    // Aggiorna ultimo aggiornamento
     if (stats.last_update) {
       const lastUpdate = document.getElementById("lastUpdate");
       if (lastUpdate) {
@@ -553,14 +503,13 @@ function updateSystemStats(stats) {
       }
     }
 
-    // Aggiorna stato connessione
     const connectionState = document.getElementById("connectionState");
     if (connectionState) {
       connectionState.textContent =
         stats.status === "connected" ? "Connesso" : "Disconnesso";
     }
 
-    // Calcola e aggiorna uptime
+
     const uptime = Math.floor((Date.now() - startTime) / 1000);
     const hours = Math.floor(uptime / 3600);
     const minutes = Math.floor((uptime % 3600) / 60);
@@ -579,9 +528,6 @@ function updateSystemStats(stats) {
   }
 }
 
-// ===========================================
-// GESTIONE TABELLA DATI
-// ===========================================
 function refreshTable() {
   try {
     const limitSelect = document.getElementById("tableLimit");
@@ -589,7 +535,6 @@ function refreshTable() {
 
     console.log(`📋 Caricamento tabella con ${limit} record...`);
 
-    // Mostra loading
     showTableLoading();
 
     fetch(`/api/measurements?limit=${limit}`)
@@ -636,7 +581,6 @@ function updateTable(data) {
   try {
     tbody.innerHTML = data
       .map((row) => {
-        // LOGICA INVERTITA ANCHE PER LA TABELLA
         const invertedButtonState = !row.button_pressed;
         const buttonDisplayText = invertedButtonState ? "PREMUTO" : "LIBERO";
         const buttonCssClass = invertedButtonState ? "btn-pressed" : "";
@@ -737,7 +681,6 @@ function exportTable() {
       "Servos_Active",
     ];
 
-    // Export anche i dati campionati (senza filtri aggiuntivi)
     const exportData = tableData;
 
     const csvData = [
@@ -786,17 +729,12 @@ function exportTable() {
   }
 }
 
-// ===========================================
-// NAVIGAZIONE E SEZIONI
-// ===========================================
 function showSection(sectionId) {
   try {
-    // Nascondi tutte le sezioni
     document.querySelectorAll(".content-section").forEach((section) => {
       section.classList.remove("active");
     });
 
-    // Mostra la sezione selezionata
     const targetSection = document.getElementById(sectionId);
     if (targetSection) {
       targetSection.classList.add("active");
@@ -805,7 +743,6 @@ function showSection(sectionId) {
       return;
     }
 
-    // Aggiorna menu di navigazione
     document.querySelectorAll(".nav-menu a").forEach((link) => {
       link.classList.remove("active");
     });
@@ -817,11 +754,9 @@ function showSection(sectionId) {
       activeLink.classList.add("active");
     }
 
-    // Azioni specifiche per sezione
     if (sectionId === "table") {
       refreshTable();
     } else if (sectionId === "charts") {
-      // Ridimensiona grafici se necessario
       setTimeout(() => {
         if (servoChart) servoChart.resize();
         if (potChart) potChart.resize();
@@ -834,12 +769,8 @@ function showSection(sectionId) {
   }
 }
 
-// ===========================================
-// EVENT LISTENERS
-// ===========================================
 function initializeEventListeners() {
   try {
-    // Auto refresh toggle
     const autoRefreshToggle = document.getElementById("autoRefresh");
     if (autoRefreshToggle) {
       autoRefreshToggle.addEventListener("change", function (e) {
@@ -857,13 +788,12 @@ function initializeEventListeners() {
       });
     }
 
-    // Refresh interval
     const refreshIntervalSelect = document.getElementById("refreshInterval");
     if (refreshIntervalSelect) {
       refreshIntervalSelect.addEventListener("change", function (e) {
         refreshInterval = parseInt(e.target.value) * 1000;
         if (autoRefreshEnabled) {
-          startAutoRefresh(); // Riavvia con nuovo intervallo
+          startAutoRefresh();
         }
         console.log(`⏱️ Intervallo aggiornamento: ${refreshInterval / 1000}s`);
         showNotification(
@@ -873,7 +803,6 @@ function initializeEventListeners() {
       });
     }
 
-    // Dark theme toggle
     const darkThemeToggle = document.getElementById("darkTheme");
     if (darkThemeToggle) {
       darkThemeToggle.addEventListener("change", function (e) {
@@ -892,11 +821,8 @@ function initializeEventListeners() {
   }
 }
 
-// ===========================================
-// AUTO REFRESH
-// ===========================================
 function startAutoRefresh() {
-  stopAutoRefresh(); // Ferma il timer precedente se esiste
+  stopAutoRefresh(); 
 
   if (autoRefreshEnabled) {
     autoRefreshTimer = setInterval(() => {
@@ -922,13 +848,9 @@ function stopAutoRefresh() {
   }
 }
 
-// ===========================================
-// CARICAMENTO DATI INIZIALI
-// ===========================================
 function loadInitialData() {
   console.log("📦 Caricamento dati iniziali...");
 
-  // Carica dati servo iniziali
   fetch("/api/latest")
     .then((response) => {
       if (!response.ok) {
@@ -945,14 +867,12 @@ function loadInitialData() {
       showNotification("Errore caricamento dati iniziali", "warning");
     });
 
-  // Carica statistiche iniziali
   fetch("/api/stats").then((response) => {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
     return response.json();
   });
-  // Carica statistiche iniziali
   fetch("/api/stats")
     .then((response) => {
       if (!response.ok) {
@@ -969,12 +889,8 @@ function loadInitialData() {
     });
 }
 
-// ===========================================
-// SISTEMA NOTIFICHE
-// ===========================================
 function showNotification(message, type = "info") {
   try {
-    // Rimuovi notifiche esistenti
     const existingNotifications = document.querySelectorAll(".notification");
     existingNotifications.forEach((notif) => {
       if (notif.parentNode) {
@@ -985,7 +901,6 @@ function showNotification(message, type = "info") {
     const notification = document.createElement("div");
     notification.className = `notification notification-${type}`;
 
-    // Icone per diversi tipi
     const icons = {
       success: "fa-check-circle",
       error: "fa-exclamation-circle",
@@ -1003,7 +918,6 @@ function showNotification(message, type = "info") {
             </button>
         `;
 
-    // Stili CSS inline per la notifica
     notification.style.cssText = `
             position: fixed;
             top: 80px;
@@ -1038,12 +952,10 @@ function showNotification(message, type = "info") {
 
     document.body.appendChild(notification);
 
-    // Animazione di entrata
     setTimeout(() => {
       notification.style.transform = "translateX(0)";
     }, 100);
 
-    // Auto-close dopo 5 secondi
     setTimeout(() => {
       closeNotification(notification.querySelector(".notification-close"));
     }, 5000);
@@ -1078,9 +990,6 @@ function closeNotification(closeButton) {
   }
 }
 
-// ===========================================
-// UTILITY E HELPER FUNCTIONS
-// ===========================================
 function safeGetElement(id) {
   const element = document.getElementById(id);
   if (!element) {
@@ -1112,18 +1021,11 @@ function throttle(func, limit) {
   };
 }
 
-// ===========================================
-// GESTIONE ERRORI GLOBALE
-// ===========================================
 window.addEventListener("error", function (event) {
   console.error("❌ Errore JavaScript globale:", event.error);
   showNotification("Si è verificato un errore imprevisto", "error");
 });
 
-
-// ===========================================
-// RESIZE HANDLER PER GRAFICI
-// ===========================================
 window.addEventListener(
   "resize",
   debounce(function () {
@@ -1137,25 +1039,18 @@ window.addEventListener(
   }, 250)
 );
 
-// ===========================================
-// API DEBUG E DEVELOPMENT
-// ===========================================
 window.debugDashboard = {
-  // Dati
   getServoData: () => servoData,
   getPotData: () => potData,
   getTableData: () => tableData,
 
-  // Controlli
   clearCharts: clearCharts,
   refreshTable: refreshTable,
   showSection: showSection,
   updateConnectionStatus: updateConnectionStatus,
 
-  // Notifiche
   showNotification: showNotification,
 
-  // Statistiche
   getStats: () => ({
     autoRefreshEnabled,
     refreshInterval,
@@ -1165,7 +1060,6 @@ window.debugDashboard = {
     socketConnected: socket ? socket.connected : false,
   }),
 
-  // Test functions
   testServoUpdate: (
     testData = {
       servo1_angle: 90,
@@ -1201,18 +1095,14 @@ window.debugDashboard = {
   },
 };
 
-// ===========================================
-// FUNZIONI ESPOSTE GLOBALMENTE
-// ===========================================
+
 window.showSection = showSection;
 window.clearCharts = clearCharts;
 window.refreshTable = refreshTable;
 window.exportTable = exportTable;
 window.closeNotification = closeNotification;
 
-// ===========================================
-// CLEANUP AL CHIUSURA PAGINA
-// ===========================================
+
 window.addEventListener("beforeunload", function () {
   try {
     stopAutoRefresh();
@@ -1225,9 +1115,6 @@ window.addEventListener("beforeunload", function () {
   }
 });
 
-// ===========================================
-// LOG FINALE
-// ===========================================
 console.log("🎛️ Dashboard JavaScript caricato completamente");
 console.log("🔧 Usa window.debugDashboard per funzioni di debug");
 console.log("📊 Grafici disponibili:", {
@@ -1235,7 +1122,6 @@ console.log("📊 Grafici disponibili:", {
   pot: !!window.potChart,
 });
 
-// Export per moduli (se necessario)
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     updateServoDisplay,

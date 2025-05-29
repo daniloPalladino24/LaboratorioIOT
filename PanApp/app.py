@@ -7,25 +7,18 @@ import threading
 import time
 import logging
 
-# ===========================================
-# CONFIGURAZIONE FLASK E INFLUXDB
-# ===========================================
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'servo_dashboard_secret_key'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Configurazione InfluxDB (stesse impostazioni del logger Python)
 INFLUXDB_URL = "http://localhost:8086"
 INFLUXDB_TOKEN = "uhln0fzak4EBwSeChsbe8NQKj9ldoaasFiE61uIy7aQ_NtfoNZGQoHWHJY199LiZfpU0IcQIBaK64KJgVeMPgg=="
 INFLUXDB_ORG = "microbit-org"
 INFLUXDB_BUCKET = "PAN"
 
-# Configurazione logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Client InfluxDB globale
 influx_client = None
 query_api = None
 
@@ -35,15 +28,12 @@ def initialize_influxdb():
     try:
         influx_client = InfluxDBClient(url=INFLUXDB_URL, token=INFLUXDB_TOKEN, org=INFLUXDB_ORG)
         query_api = influx_client.query_api()
-        logger.info("✅ InfluxDB connesso per Flask")
+        logger.info("InfluxDB connesso per Flask")
         return True
     except Exception as e:
-        logger.error(f"❌ Errore connessione InfluxDB: {e}")
+        logger.error(f"Errore connessione InfluxDB: {e}")
         return False
 
-# ===========================================
-# QUERY INFLUXDB
-# ===========================================
 
 def get_latest_servo_data():
     """Ottiene gli ultimi dati dei servo da InfluxDB"""
@@ -51,7 +41,6 @@ def get_latest_servo_data():
         return None
     
     try:
-        # Query per gli ultimi dati del sistema servo E dei controlli
         servo_query = f'''
         from(bucket: "{INFLUXDB_BUCKET}")
         |> range(start: -1h)
@@ -71,7 +60,6 @@ def get_latest_servo_data():
         servo_result = query_api.query(servo_query)
         controls_result = query_api.query(controls_query)
         
-        # Processa i risultati dei servo
         data = {}
         if servo_result:
             for table in servo_result:
@@ -81,14 +69,12 @@ def get_latest_servo_data():
                     data[field] = value
                     data['timestamp'] = record.get_time().isoformat()
         
-        # Processa i risultati dei controlli (pulsante e LED)
         if controls_result:
             for table in controls_result:
                 for record in table.records:
                     field = record.get_field()
                     value = record.get_value()
                     data[field] = value
-                    # Aggiorna timestamp se più recente
                     if 'timestamp' not in data or record.get_time().isoformat() > data['timestamp']:
                         data['timestamp'] = record.get_time().isoformat()
         
@@ -107,7 +93,6 @@ def get_servo_history(hours=1):
         return []
     
     try:
-        # Query per lo storico degli angoli dei servo
         query = f'''
         from(bucket: "{INFLUXDB_BUCKET}")
         |> range(start: -{hours}h)
@@ -123,7 +108,6 @@ def get_servo_history(hours=1):
         if not result:
             return []
         
-        # Organizza i dati per timestamp
         time_series = {}
         
         for table in result:
@@ -137,7 +121,6 @@ def get_servo_history(hours=1):
                 
                 time_series[timestamp][field] = value
         
-        # Converte in lista ordinata per timestamp
         history = list(time_series.values())
         history.sort(key=lambda x: x['timestamp'])
         
@@ -192,7 +175,6 @@ def get_recent_measurements(limit=50):
         return []
     
     try:
-        # Query con campionamento ogni 30 secondi - DATI SERVO
         query = f'''
         from(bucket: "{INFLUXDB_BUCKET}")
         |> range(start: -6h)
@@ -207,7 +189,6 @@ def get_recent_measurements(limit=50):
         |> limit(n: {limit})
         '''
         
-        # Query separata per i controlli (pulsante e LED) campionati ogni 30 secondi
         controls_query = f'''
         from(bucket: "{INFLUXDB_BUCKET}")
         |> range(start: -6h)
@@ -222,10 +203,8 @@ def get_recent_measurements(limit=50):
         servo_result = query_api.query(query)
         controls_result = query_api.query(controls_query)
         
-        # Organizza i dati per timestamp dai servo
         measurements = {}
-        
-        # Processa dati servo
+
         for table in servo_result:
             for record in table.records:
                 timestamp = record.get_time()
@@ -238,47 +217,38 @@ def get_recent_measurements(limit=50):
                         'date_str': timestamp.strftime('%d/%m/%Y')
                     }
                 
-                # Aggiungi tutti i campi del record
                 values = record.values
                 for field_name, field_value in values.items():
                     if field_name.startswith('servo') or field_name.startswith('pot') or field_name == 'servos_active_count':
                         measurements[ts_key][field_name] = field_value
         
-        # Processa dati controlli e fa il merge per timestamp
         for table in controls_result:
             for record in table.records:
                 timestamp = record.get_time()
                 ts_key = timestamp.isoformat()
                 
-                # Se esiste già il timestamp dai servo, aggiungi i controlli
                 if ts_key in measurements:
                     values = record.values
                     for field_name, field_value in values.items():
                         if field_name in ['button_pressed', 'led_state']:
                             measurements[ts_key][field_name] = field_value
-                # Altrimenti crea nuovo record solo se vicino nel tempo
                 else:
-                    # Trova il timestamp servo più vicino (entro 15 secondi)
                     for servo_ts_key in measurements.keys():
                         servo_time = measurements[servo_ts_key]['timestamp']
                         time_diff = abs((timestamp - servo_time).total_seconds())
-                        if time_diff <= 15:  # Entro 15 secondi
+                        if time_diff <= 15:
                             values = record.values
                             for field_name, field_value in values.items():
                                 if field_name in ['button_pressed', 'led_state']:
                                     measurements[servo_ts_key][field_name] = field_value
                             break
-        
-        # Converte in lista e ordina per timestamp (più recenti prima)
+
         measurements_list = list(measurements.values())
         measurements_list.sort(key=lambda x: x['timestamp'], reverse=True)
         
-        # Limita il numero di risultati e rimuovi record senza dati controllo
         filtered_measurements = []
         for measurement in measurements_list:
-            # Include solo se ha almeno i dati servo base
             if 'servo1_angle' in measurement:
-                # Aggiungi valori di default per campi mancanti
                 measurement.setdefault('button_pressed', 0)
                 measurement.setdefault('led_state', 0)
                 measurement.setdefault('servos_active_count', 0)
@@ -287,7 +257,7 @@ def get_recent_measurements(limit=50):
                 if len(filtered_measurements) >= limit:
                     break
         
-        logger.info(f"📊 Tabella: {len(filtered_measurements)} record campionati ogni 30s")
+        logger.info(f"Tabella: {len(filtered_measurements)} record campionati ogni 30s")
         return filtered_measurements
     
     except Exception as e:
@@ -300,7 +270,6 @@ def get_system_stats():
         return {}
     
     try:
-        # Conta i messaggi ricevuti nell'ultima ora
         query = f'''
         from(bucket: "{INFLUXDB_BUCKET}")
         |> range(start: -1h)
@@ -318,7 +287,6 @@ def get_system_stats():
                 message_count = record.get_value()
                 break
         
-        # Ultimo aggiornamento
         last_data = get_latest_servo_data()
         last_update = None
         if last_data and 'timestamp' in last_data:
@@ -333,10 +301,6 @@ def get_system_stats():
     except Exception as e:
         logger.error(f"Errore statistiche sistema: {e}")
         return {}
-
-# ===========================================
-# ROUTES FLASK
-# ===========================================
 
 @app.route('/')
 def dashboard():
@@ -381,7 +345,6 @@ def api_stats():
 def api_debug():
     """API per debug - mostra tutti i dati disponibili"""
     try:
-        # Query per vedere tutti i campi disponibili negli ultimi dati
         query = f'''
         from(bucket: "{INFLUXDB_BUCKET}")
         |> range(start: -10m)
@@ -435,10 +398,6 @@ def debug_page():
     </html>
     '''
 
-# ===========================================
-# WEBSOCKET PER DATI IN TEMPO REALE
-# ===========================================
-
 @socketio.on('connect')
 def handle_connect():
     """Gestisce nuove connessioni WebSocket"""
@@ -454,50 +413,41 @@ def broadcast_latest_data():
     """Thread che invia dati aggiornati via WebSocket"""
     while True:
         try:
-            # Ottieni ultimi dati
             latest = get_latest_servo_data()
             stats = get_system_stats()
             
             if latest:
-                # Emetti dati a tutti i client connessi
                 socketio.emit('data_update', {
                     'servo_data': latest,
                     'system_stats': stats,
                     'timestamp': datetime.now().isoformat()
                 })
             
-            time.sleep(2)  # Aggiorna ogni 2 secondi
+            time.sleep(2)
             
         except Exception as e:
             logger.error(f"Errore broadcast dati: {e}")
-            time.sleep(5)  # Attesa più lunga in caso di errore
-
-# ===========================================
-# MAIN
-# ===========================================
+            time.sleep(5)
 
 def main():
     print("=" * 70)
-    print("🚀 SERVO CONTROLLER FLASK DASHBOARD")
+    print(" SERVO CONTROLLER FLASK DASHBOARD")
     print("=" * 70)
-    print("📊 Dashboard web real-time per sistema servo micro:bit")
-    print("🌐 Server Flask con WebSocket per aggiornamenti live")
-    print("📈 Grafici interattivi e controlli visual")
-    print("📋 Tabella misurazioni in tempo reale")
+    print(" Dashboard web real-time per sistema servo micro:bit")
+    print(" Server Flask con WebSocket per aggiornamenti live")
+    print(" Grafici interattivi e controlli visual")
+    print(" Tabella misurazioni in tempo reale")
     print("=" * 70)
     
-    # Inizializza InfluxDB
     if not initialize_influxdb():
-        print("❌ Impossibile connettersi a InfluxDB. Verificare la configurazione.")
+        print("Impossibile connettersi a InfluxDB. Verificare la configurazione.")
         return
     
-    # Crea directory templates se non esiste
     import os
     templates_dir = os.path.join(os.path.dirname(__file__), 'templates')
     if not os.path.exists(templates_dir):
         os.makedirs(templates_dir)
     
-    # Crea directory static se non esiste
     static_dir = os.path.join(os.path.dirname(__file__), 'static')
     if not os.path.exists(static_dir):
         os.makedirs(static_dir)
@@ -506,24 +456,22 @@ def main():
         os.makedirs(css_dir, exist_ok=True)
         os.makedirs(js_dir, exist_ok=True)
     
-    # Avvia thread per broadcast dati
     broadcast_thread = threading.Thread(target=broadcast_latest_data, daemon=True)
     broadcast_thread.start()
     
-    print("📊 Dashboard disponibile su: http://localhost:5000")
-    print("🔄 Aggiornamento dati ogni 2 secondi")
-    print("📡 WebSocket attivo per real-time updates")
+    print("Dashboard disponibile su: http://localhost:5000")
+    print("Aggiornamento dati ogni 2 secondi")
+    print("WebSocket attivo per real-time updates")
     print("=" * 70)
     
-    # Avvia server Flask
     try:
         socketio.run(app, host='0.0.0.0', port=5000, debug=False)
     except KeyboardInterrupt:
-        print("\n🛑 Server fermato dall'utente")
+        print("\n Server fermato dall'utente")
     finally:
         if influx_client:
             influx_client.close()
-        print("🏁 Dashboard terminata")
+        print(" Dashboard terminata")
 
 if __name__ == "__main__":
     main()
