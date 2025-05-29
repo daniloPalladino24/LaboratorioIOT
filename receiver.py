@@ -11,86 +11,48 @@ import radio
 # 3V = Alimentazione (+) per servo e LED
 # GND = Terra (-) per servo e LED
 
-# Setup PWM per servo (50Hz = 20ms)
-pin8.set_analog_period(20)   # Servo 1
-pin12.set_analog_period(20)  # Servo 2
-pin16.set_analog_period(20)  # Servo 3
+pin8.set_analog_period(20)
+pin12.set_analog_period(20)
+pin16.set_analog_period(20)
 
-# Configurazione LED
-pin14.write_digital(1)  # Inizialmente acceso (logica invertita)
+pin14.write_digital(1)
 
-# ===========================================
-# CONFIGURAZIONE RADIO
-# ===========================================
 radio.on()
-radio.config(channel=42, power=7, length=100)  # Stesso canale del trasmettitore
-
-# ===========================================
-# FUNZIONI CONTROLLO SERVO E LED
-# ===========================================
+radio.config(channel=42, power=7, length=100)
 
 def pot_to_angle(pot_value):
-    """Converte valore potenziometro grezzo (0-1023) in angolo servo (0-180°) SPECCHIATO
-    
-    Logica:
-    - I potenziometri hanno una rotazione fisica di circa 270°-300°
-    - Vogliamo che solo i primi 180° del potenziometro controllino il servo
-    - 180° del potenziometro corrispondono a circa 512 del valore digitale (0-1023)
-    - MOVIMENTO SPECCHIATO: 0 del potenziometro → 180° del servo, 512 del potenziometro → 0° del servo
-    - Se il potenziometro supera 512, il servo rimane a 0°
-    """
-    # Limita il valore del potenziometro a massimo 512 (primi 180° di rotazione)
     limited_pot_value = min(pot_value, 512)
-    
-    # Converte 0-512 del potenziometro in 180-0° del servo (SPECCHIATO)
     angle = 180 - (limited_pot_value / 512) * 180
-    
     return angle
 
 def angle_to_pwm(angle):
-    """Converte angolo (0-180°) in valore PWM per servo"""
-    # Servo standard: 0.5ms (0°) a 2.5ms (180°)
-    # Valori micro:bit: 26 a 128
     pwm_value = int((angle / 180) * (128 - 26)) + 26
     return pwm_value
 
 def control_servos(pot1_val, pot2_val, pot3_val):
-    """Controlla tutti e tre i servo basandosi sui valori ricevuti"""
-    # Calcola angoli (replica fedele fino a 180°)
     angle1 = pot_to_angle(pot1_val)
     angle2 = pot_to_angle(pot2_val)
     angle3 = pot_to_angle(pot3_val)
-    
-    # Calcola valori PWM
     pwm1 = angle_to_pwm(angle1)
     pwm2 = angle_to_pwm(angle2)
     pwm3 = angle_to_pwm(angle3)
-    
-    # Applica ai servo
-    pin8.write_analog(pwm1)   # Servo 1
-    pin12.write_analog(pwm2)  # Servo 2
-    pin16.write_analog(pwm3)  # Servo 3
-    
+    pin8.write_analog(pwm1)
+    pin12.write_analog(pwm2)
+    pin16.write_analog(pwm3)
     return angle1, angle2, angle3
 
 def control_led(button_state):
-    """Controlla il LED esterno in base allo stato del pulsante
-    Inverte la logica: LED acceso quando pulsante non premuto (0) e spento quando premuto (1)"""
-    inverted_state = 1 - button_state  # Inverte lo stato: 0→1, 1→0
+    inverted_state = 1 - button_state
     pin14.write_digital(inverted_state)
     return inverted_state
 
 def parse_radio_message(message):
-    """Decodifica messaggio radio nel formato P1:val1,P2:val2,P3:val3,BTN:state"""
     try:
-        # Divide il messaggio per virgola
         parts = message.split(',')
-        
         pot1_val = 0
         pot2_val = 0
         pot3_val = 0
         button_state = 0
-        
         for part in parts:
             if part.startswith('P1:'):
                 pot1_val = int(part[3:])
@@ -100,101 +62,61 @@ def parse_radio_message(message):
                 pot3_val = int(part[3:])
             elif part.startswith('BTN:'):
                 button_state = int(part[4:])
-        
         return pot1_val, pot2_val, pot3_val, button_state, True
-    
     except:
         return 0, 0, 0, 0, False
 
 def initialize_servos():
-    """Inizializza tutti i servo alla posizione 180 gradi (ora che è specchiato)"""
-    max_pwm = angle_to_pwm(0)  # 180 gradi = posizione iniziale con movimento specchiato
-    
-    pin8.write_analog(max_pwm)   # Servo 1 a 180°
-    pin12.write_analog(max_pwm)  # Servo 2 a 180°
-    pin16.write_analog(max_pwm)  # Servo 3 a 180°
-    
+    max_pwm = angle_to_pwm(0)
+    pin8.write_analog(max_pwm)
+    pin12.write_analog(max_pwm)
+    pin16.write_analog(max_pwm)
     print("ALL_SERVOS_TO_180_MIRRORED")
 
 def show_connection_status(connected):
-    """Mostra stato connessione radio"""
     if connected:
-        display.show(Image.YES)  # Connesso
+        display.show(Image.YES)
     else:
-        display.show(Image.NO)   # Disconnesso
-
-# ===========================================
-# SETUP INIZIALE
-# ===========================================
+        display.show(Image.NO)
 
 print("RECEIVER_INIT")
-
-# Spegni display completamente
 display.off()
-
-# Inizializza servo a 0 gradi
 initialize_servos()
-sleep(2000)  # Attesa per posizionamento
-
+sleep(2000)
 print("RADIO_RECEIVER_READY")
 
-# ===========================================
-# LOOP PRINCIPALE RICEZIONE
-# ===========================================
-
-# Variabili per timeout connessione
 last_receive_time = 0
-connection_timeout = 2000  # 2 secondi senza dati = disconnesso
+connection_timeout = 2000
 is_connected = False
 
-# Valori servo correnti (iniziano da 0)
-current_pot1 = 0  # Valore 0 iniziale
+current_pot1 = 0
 current_pot2 = 0
 current_pot3 = 0
-current_button = 0  # Pulsante inizialmente rilasciato
+current_button = 0
 
 while True:
     current_time = running_time()
-    
-    # Controlla messaggi radio
     message = radio.receive()
-    
     if message:
-        # Decodifica messaggio
         pot1_val, pot2_val, pot3_val, button_state, valid = parse_radio_message(message)
-        
         if valid:
-            # Aggiorna valori servo e pulsante
             current_pot1 = pot1_val
             current_pot2 = pot2_val
             current_pot3 = pot3_val
             current_button = button_state
-            
-            # Controlla servo (replica fedele fino a 180°)
             angle1, angle2, angle3 = control_servos(pot1_val, pot2_val, pot3_val)
-            
-            # Controlla LED esterno
             led_state = control_led(button_state)
-            
-            # Aggiorna stato connessione
             last_receive_time = current_time
             is_connected = True
-            
-            # Debug con indicazione dei valori grezzi e angoli risultanti (specchiati)
             pot1_status = "" if pot1_val > 512 else ""
             pot2_status = "" if pot2_val > 512 else ""
             pot3_status = "" if pot3_val > 512 else ""
-            
             print("RX: P1={}{} P2={}{} P3={}{} BTN={} → A1={}° A2={}° A3={}° LED={}".format(
                 pot1_val, pot1_status, pot2_val, pot2_status, pot3_val, pot3_status,
                 button_state, round(angle1), round(angle2), round(angle3), 1-button_state))
-    
-    # Controlla timeout connessione
     if current_time - last_receive_time > connection_timeout:
         if is_connected:
             is_connected = False
             print("CONNECTION_LOST")
-            # Torna a 0 gradi quando si perde la connessione
             initialize_servos()
-            # Spegni il LED quando si perde la connessione
-            control_led(0)  # 0 = pulsante non premuto, quindi LED acceso con logica invertita
+            control_led(0)
