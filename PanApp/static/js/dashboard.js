@@ -1120,10 +1120,6 @@ window.addEventListener("error", function (event) {
   showNotification("Si è verificato un errore imprevisto", "error");
 });
 
-window.addEventListener("unhandledrejection", function (event) {
-  console.error("❌ Promise rejection non gestita:", event.reason);
-  showNotification("Errore di connessione", "error");
-});
 
 // ===========================================
 // RESIZE HANDLER PER GRAFICI
